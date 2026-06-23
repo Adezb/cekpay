@@ -1,0 +1,40 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
+@config "../tailwind.config.ts";
+@import "tailwindcss";
+
+@layer base {
+  body {
+    @apply bg-slate-100 text-slate-900 font-sans antialiased;
+    overscroll-behavior-y: none;
+    
+    /* Disable text selection globally to feel like a native app */
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    
+    /* Apply Safe Area Insets padding for mobile layout notch compatibility */
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  /* Explicitly allow selection on inputs, textareas, and receipt text or selectable elements */
+  input, textarea, [data-selectable], .selectable {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-6px); }
+  20%, 40%, 60%, 80% { transform: translateX(6px); }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}

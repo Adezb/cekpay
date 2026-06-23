@@ -9,14 +9,13 @@ export const ReceiptModal: React.FC = () => {
   if (!receiptTransaction) return null
 
   const handleShare = async () => {
-    const text = `✅ CEKPay Transaction Successful!\n\nService: ${receiptTransaction.service}\nAmount: ${formatNaira(receiptTransaction.amount)}\nRecipient: ${receiptTransaction.recipient || receiptTransaction.provider || 'N/A'}\nRef: ${receiptTransaction.reference}\nDate: ${new Date(receiptTransaction.createdAt).toLocaleString()}\n\nDownload CEKPay for instant VTU!`
+    const text = `✅ CEKPay Transaction Successful!\n\nService: ${receiptTransaction.service}\nAmount: ${formatNaira(receiptTransaction.amount)}\nRecipient: ${receiptTransaction.recipient || receiptTransaction.provider || 'N/A'}\nRef: ${receiptTransaction.reference}\nDate: ${new Date(receiptTransaction.createdAt).toLocaleString()}\n\nDownload CEKPay for instant VTU at cekpay.vercel.app`
 
     if (navigator.share) {
       try {
         await navigator.share({
           title: 'CEKPay Receipt',
-          text,
-          url: window.location.origin
+          text
         })
       } catch (err) {
         // User probably cancelled share

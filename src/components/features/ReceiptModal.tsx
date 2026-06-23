@@ -2,6 +2,7 @@ import React from 'react'
 import { Modal } from '../ui/Modal'
 import { useUIStore } from '../../stores/uiStore'
 import { formatNaira } from '../../utils/formatCurrency'
+import { Logo } from '../ui/Logo'
 
 export const ReceiptModal: React.FC = () => {
   const { isModalOpen, closeModal, receiptTransaction, showToast } = useUIStore()
@@ -37,24 +38,7 @@ export const ReceiptModal: React.FC = () => {
         <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 relative overflow-hidden">
           {/* Logo / Header */}
           <div className="text-center space-y-2 mb-6">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" className="w-16 h-16 mx-auto drop-shadow-sm">
-              <defs>
-                <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#1E40AF" />
-                  <stop offset="100%" stop-color="#1E3A8A" />
-                </linearGradient>
-                <linearGradient id="boltGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#38BDF8" />
-                  <stop offset="100%" stop-color="#0284C7" />
-                </linearGradient>
-              </defs>
-
-              <rect width="512" height="512" rx="115" fill="url(#bgGrad)" />
-
-              <path d="M 360 160 A 130 130 0 1 0 360 352" fill="none" stroke="#FFFFFF" stroke-width="52" stroke-linecap="round" />
-
-              <path d="M 285 130 L 210 270 L 295 270 L 240 400 L 390 230 L 310 230 Z" fill="url(#boltGrad)" />
-            </svg>
+            <Logo className="w-16 h-16 mx-auto drop-shadow-sm" />
 
             <h2 className="text-success font-bold text-lg">Transaction Successful</h2>
             <p className="text-3xl font-black text-text-primary">

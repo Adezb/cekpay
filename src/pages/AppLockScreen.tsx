@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PinInput } from '../components/ui/PinInput'
 import { Toast } from '../components/ui/Toast'
+import { Logo } from '../components/ui/Logo'
 import { useAuthStore } from '../stores/authStore'
 
 export const AppLockScreen: React.FC = () => {
@@ -126,25 +127,7 @@ export const AppLockScreen: React.FC = () => {
         {/* CEKPay Logo */}
         <div className="flex flex-col items-center justify-center mb-10 select-none">
           <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-brand text-white shadow-lg shadow-brand/25 mb-3">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="192" height="192">
-              <defs>
-                <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#1E40AF" />
-                  <stop offset="100%" stop-color="#1E3A8A" />
-                </linearGradient>
-                <linearGradient id="boltGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#38BDF8" />
-                  <stop offset="100%" stop-color="#0284C7" />
-                </linearGradient>
-              </defs>
-
-              <rect width="512" height="512" rx="115" fill="url(#bgGrad)" />
-
-              <path d="M 360 160 A 130 130 0 1 0 360 352" fill="none" stroke="#FFFFFF" stroke-width="52" stroke-linecap="round" />
-
-              <path d="M 285 130 L 210 270 L 295 270 L 240 400 L 390 230 L 310 230 Z" fill="url(#boltGrad)" />
-            </svg>
-
+            <Logo width="192" height="192" />
           </div>
           <span className="text-3xl font-black tracking-tight text-text-primary">
             CEK<span className="text-brand">Pay</span>

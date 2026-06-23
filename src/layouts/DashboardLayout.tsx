@@ -2,6 +2,7 @@ import React, { useEffect } from 'react'
 import { NavLink, Link, Navigate } from 'react-router-dom'
 import { SmartContactsManager } from '../components/features/SmartContactsManager'
 import { useAuthStore } from '../stores/authStore'
+import { Logo } from '../components/ui/Logo'
 
 export interface DashboardLayoutProps {
   children: React.ReactNode
@@ -77,25 +78,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
             {/* Brand */}
             <Link to="/dashboard" className="flex items-center gap-2.5 shrink-0">
               <div className="w-8 h-8 rounded-lg bg-brand text-white flex items-center justify-center shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="192" height="192">
-                  <defs>
-                    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stop-color="#1E40AF" />
-                      <stop offset="100%" stop-color="#1E3A8A" />
-                    </linearGradient>
-                    <linearGradient id="boltGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stop-color="#38BDF8" />
-                      <stop offset="100%" stop-color="#0284C7" />
-                    </linearGradient>
-                  </defs>
-
-                  <rect width="512" height="512" rx="115" fill="url(#bgGrad)" />
-
-                  <path d="M 360 160 A 130 130 0 1 0 360 352" fill="none" stroke="#FFFFFF" stroke-width="52" stroke-linecap="round" />
-
-                  <path d="M 285 130 L 210 270 L 295 270 L 240 400 L 390 230 L 310 230 Z" fill="url(#boltGrad)" />
-                </svg>
-
+                <Logo width="192" height="192" />
               </div>
               <span className="text-xl font-black tracking-tight text-text-primary">
                 CEK<span className="text-brand">Pay</span>

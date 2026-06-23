@@ -6,9 +6,8 @@ import { PinInput } from '../components/ui/PinInput'
 import { PassInput } from '../components/ui/PassInput'
 import { Spinner } from '../components/ui/Spinner'
 import { StatusBadge } from '../components/ui/StatusBadge'
-import { Toast } from '../components/ui/Toast'
-import type { ToastType } from '../components/ui/Toast'
 import { Card } from '../components/ui/Card'
+import { useUIStore } from '../stores/uiStore'
 
 export const DevPlayground: React.FC = () => {
   // Button interactive states
@@ -30,34 +29,10 @@ export const DevPlayground: React.FC = () => {
   const [passError, setPassError] = useState('')
 
   // Toast states
-  const [activeToasts, setActiveToasts] = useState<{ id: number; message: string; type: ToastType }[]>([])
-  const [toastCounter, setToastCounter] = useState(0)
-
-  const triggerToast = (message: string, type: ToastType) => {
-    const id = toastCounter
-    setToastCounter((prev) => prev + 1)
-    setActiveToasts((prev) => [...prev, { id, message, type }])
-  }
-
-  const removeToast = (id: number) => {
-    setActiveToasts((prev) => prev.filter((t) => t.id !== id))
-  }
+  const showToast = useUIStore((state) => state.showToast)
 
   return (
     <div className="min-h-screen bg-canvas text-text-primary px-4 py-8 sm:px-6 lg:px-8">
-      {/* Toast Portal Container */}
-      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 w-full max-w-sm pointer-events-none">
-        {activeToasts.map((toast) => (
-          <div key={toast.id} className="pointer-events-auto w-full">
-            <Toast
-              message={toast.message}
-              type={toast.type}
-              onClose={() => removeToast(toast.id)}
-            />
-          </div>
-        ))}
-      </div>
-
       <div className="max-w-4xl mx-auto space-y-10">
         {/* Header */}
         <header className="border-b border-slate-200 pb-5">
@@ -156,7 +131,7 @@ export const DevPlayground: React.FC = () => {
                 title="Authorization PIN"
                 description="Enter your 4-digit security PIN to confirm payment"
                 onComplete={(val) => {
-                  triggerToast(`PIN Completed: ${val}`, 'success')
+                  showToast(`PIN Completed: ${val}`, 'success')
                   if (val !== '1234') {
                     setPinError('Incorrect PIN (try 1234)')
                   } else {
@@ -202,7 +177,7 @@ export const DevPlayground: React.FC = () => {
                 onChange={setPass}
                 error={passError}
                 onComplete={(val) => {
-                  triggerToast(`Pass Completed: ${val}`, 'success')
+                  showToast(`Pass Completed: ${val}`, 'success')
                   if (val !== 'A7X9TP') {
                     setPassError('Incorrect Pass (try A7X9TP)')
                   } else {
@@ -269,7 +244,7 @@ export const DevPlayground: React.FC = () => {
                   </Button>
                   <Button variant="primary" onClick={() => {
                     setIsModalOpen(false)
-                    triggerToast('Transaction submitted', 'info')
+                    showToast('Transaction submitted', 'info')
                   }}>
                     Proceed
                   </Button>
@@ -322,13 +297,13 @@ export const DevPlayground: React.FC = () => {
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-text-muted uppercase">Toast Triggers</h3>
               <div className="flex flex-wrap gap-2">
-                <Button variant="secondary" className="w-auto py-2 px-4" onClick={() => triggerToast('DVA Account details copied successfully!', 'success')}>
+                <Button variant="secondary" className="w-auto py-2 px-4" onClick={() => showToast('DVA Account details copied successfully!', 'success')}>
                   Trigger Success
                 </Button>
-                <Button variant="secondary" className="w-auto py-2 px-4 text-error" onClick={() => triggerToast('Transaction failed: Insufficient balance.', 'error')}>
+                <Button variant="secondary" className="w-auto py-2 px-4 text-error" onClick={() => showToast('Transaction failed: Insufficient balance.', 'error')}>
                   Trigger Error
                 </Button>
-                <Button variant="secondary" className="w-auto py-2 px-4 text-brand" onClick={() => triggerToast('Connecting to payment processor...', 'info')}>
+                <Button variant="secondary" className="w-auto py-2 px-4 text-brand" onClick={() => showToast('Connecting to payment processor...', 'info')}>
                   Trigger Info
                 </Button>
               </div>

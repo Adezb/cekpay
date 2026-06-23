@@ -10,7 +10,19 @@ export const ProfilePage: React.FC = () => {
 
   const [isCopied, setIsCopied] = useState(false)
 
-  if (!user || !wallet) return null
+  if (!user || !wallet) {
+    return (
+      <div className="p-6 space-y-6 animate-pulse">
+        <div className="h-32 bg-slate-200 rounded-b-3xl -mt-6 -mx-6" />
+        <div className="h-24 bg-slate-200 rounded-2xl" />
+        <div className="space-y-3">
+          <div className="h-16 bg-slate-200 rounded-2xl" />
+          <div className="h-16 bg-slate-200 rounded-2xl" />
+          <div className="h-16 bg-slate-200 rounded-2xl" />
+        </div>
+      </div>
+    )
+  }
 
   const handleCopyAccount = () => {
     navigator.clipboard.writeText(wallet.accountNumber)

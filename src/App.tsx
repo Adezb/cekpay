@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { ToastContainer } from './components/ui/ToastContainer'
 import { AuthLayout } from './layouts/AuthLayout'
 import { DashboardLayout } from './layouts/DashboardLayout'
 import { AdminLayout } from './layouts/AdminLayout'
@@ -263,6 +264,9 @@ function App() {
 
       {/* Global PWA Install Prompt */}
       <InstallPrompt />
+
+      {/* Global Toast Notifications */}
+      <ToastContainer />
     </BrowserRouter>
   )
 }

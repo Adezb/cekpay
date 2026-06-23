@@ -1,5 +1,5 @@
-import React from 'react'
-import { NavLink, Link } from 'react-router-dom'
+import React, { useEffect } from 'react'
+import { NavLink, Link, Navigate } from 'react-router-dom'
 import { SmartContactsManager } from '../components/features/SmartContactsManager'
 import { useAuthStore } from '../stores/authStore'
 
@@ -9,8 +9,18 @@ export interface DashboardLayoutProps {
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const user = useAuthStore(state => state.user)
+  const logout = useAuthStore(state => state.logout)
 
-  if (!user) return null
+  useEffect(() => {
+    if (!user) {
+      // Force clean up of legacy state to prevent route guard desync loops
+      logout()
+    }
+  }, [user, logout])
+
+  if (!user) {
+    return <Navigate to="/auth/signup" replace />
+  }
 
   // Shared nav items for both desktop header and mobile bottom bar
   const navItems = [

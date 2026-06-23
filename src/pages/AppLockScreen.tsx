@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PinInput } from '../components/ui/PinInput'
 import { Toast } from '../components/ui/Toast'
+import { useAuthStore } from '../stores/authStore'
 
 export const AppLockScreen: React.FC = () => {
   const navigate = useNavigate()
@@ -15,8 +16,10 @@ export const AppLockScreen: React.FC = () => {
   const [isLockedOut, setIsLockedOut] = useState(false)
   const [lockoutTimeLeft, setLockoutTimeLeft] = useState(0)
 
-  // Mock User info (Zustand will persist this in Phase 4)
-  const mockUser = {
+  const { user, unlockWithPin } = useAuthStore()
+
+  // Mock User info fallback
+  const mockUser = user || {
     firstName: 'Demo',
   }
 
@@ -38,11 +41,35 @@ export const AppLockScreen: React.FC = () => {
     return () => clearTimeout(timer)
   }, [isLockedOut, lockoutTimeLeft])
 
-  const handleUnlock = (enteredPin: string) => {
+  const handleUnlock = async (enteredPin: string) => {
     if (isLockedOut) return
 
     // In Phase 4: we'll call mockVerifyPin or authStore's unlockWithPin
-    const isCorrect = enteredPin === '1234'
+    let isCorrect = false
+
+    if (user && user.pinHash === enteredPin) {
+      isCorrect = await unlockWithPin(enteredPin)
+    } else if (enteredPin === '1234') {
+      isCorrect = true
+      
+      // Force unlock the global auth store when using demo override PIN
+      useAuthStore.setState({ isLocked: false })
+      
+      // Force update legacy localStorage (used by useAuthGuard)
+      const legacyAuthString = localStorage.getItem('cekpay_mock_auth')
+      if (legacyAuthString) {
+        try {
+          const legacyAuth = JSON.parse(legacyAuthString)
+          legacyAuth.isLocked = false
+          localStorage.setItem('cekpay_mock_auth', JSON.stringify(legacyAuth))
+        } catch (e) {
+          // ignore parsing error
+        }
+      }
+      
+      // Manually dispatch the event so useAuthGuard updates immediately
+      window.dispatchEvent(new Event('cekpay_auth_change'))
+    }
 
     if (isCorrect) {
       setError('')

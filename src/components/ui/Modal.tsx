@@ -64,7 +64,7 @@ export const Modal: React.FC<ModalProps> = ({
   if (!shouldRender) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-0 sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop with backdrop-blur and fade transition */}
       <div
         className={`fixed inset-0 backdrop-blur-md bg-black/40 transition-opacity duration-300 ease-out ${
@@ -74,23 +74,18 @@ export const Modal: React.FC<ModalProps> = ({
         aria-hidden="true"
       />
 
-      {/* Modal/Bottom-Sheet Panel */}
+      {/* Modal Panel */}
       <div
         ref={modalRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}
-        className={`relative w-full bg-surface shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ease-out z-50 rounded-t-3xl sm:rounded-2xl max-h-[80dvh] sm:max-h-[85vh] sm:max-w-md sm:w-full pb-safe ${
+        className={`relative w-full bg-surface shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ease-out z-50 rounded-2xl max-h-[85vh] max-w-md ${
           animateShow
-            ? 'translate-y-0 opacity-100 sm:scale-100 sm:opacity-100'
-            : 'translate-y-full opacity-0 sm:scale-95 sm:opacity-0'
+            ? 'scale-100 opacity-100'
+            : 'scale-95 opacity-0'
         }`}
       >
-        {/* Mobile Drag Indicator / Top Pull-bar */}
-        <div 
-          className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-3 block sm:hidden cursor-pointer"
-          onClick={onClose}
-        />
 
         {/* Header */}
         {(title || showCloseButton) && (

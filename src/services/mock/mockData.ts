@@ -35,6 +35,7 @@ const ts = (daysAgo: number, hour = 10, minute = 30) => {
 export const MOCK_USERS: User[] = [
   {
     id: 'usr_demo_001',
+    email: 'demo@cekpay.com',
     phone: '08012345678',
     firstName: 'Tunde',
     lastName: 'Adebayo',
@@ -44,6 +45,7 @@ export const MOCK_USERS: User[] = [
   },
   {
     id: 'usr_admin_001',
+    email: 'admin@cekpay.com',
     phone: '08099999999',
     firstName: 'Admin',
     lastName: 'CEKPay',

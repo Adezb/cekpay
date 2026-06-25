@@ -51,6 +51,7 @@ interface AuthState {
   // ── Session Actions ──
   logout: () => void
   toggleAdminRole: () => void  // DEV ONLY: flip isAdmin for testing
+  updateUser: (updates: Partial<User>) => void // Update local user fields
 }
 
 // ─── Initial State ────────────────────────────────────────
@@ -205,6 +206,17 @@ export const useAuthStore = create<AuthState>()(
         }
 
         _dispatchAuthChange()
+      },
+
+      /**
+       * Update local user fields
+       */
+      updateUser: (updates: Partial<User>) => {
+        const { user } = get()
+        if (user) {
+          set({ user: { ...user, ...updates } })
+          _dispatchAuthChange()
+        }
       },
     }),
     {

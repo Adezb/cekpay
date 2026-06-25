@@ -8,6 +8,7 @@ export type AnnouncementType = 'Info' | 'Warning' | 'Promo'
 
 export interface User {
   id: string              // UUID
+  email: string
   phone: string
   firstName: string
   lastName: string
@@ -20,9 +21,11 @@ export interface Wallet {
   id: string
   userId: string
   balance: number         // DECIMAL
-  paystackCustomerCode: string
-  accountNumber: string   // DVA Account Number
-  bankName: string        // e.g., Wema, Titan
+  paystackCustomerCode?: string
+  accountNumber?: string  // DVA Account Number
+  bankName?: string       // e.g., Wema, Titan
+  localWithdrawalBank?: string
+  localWithdrawalAccount?: string
 }
 
 export interface Transaction {
@@ -90,6 +93,7 @@ export interface SignupRequest {
   firstName: string
   lastName: string
   phone: string
+  email: string
 }
 
 export interface AirtimeRequest {

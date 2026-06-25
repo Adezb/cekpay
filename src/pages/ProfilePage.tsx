@@ -2,13 +2,19 @@ import React, { useState } from 'react'
 import { useAuthStore } from '../stores/authStore'
 import { useWalletStore } from '../stores/walletStore'
 import { useUIStore } from '../stores/uiStore'
+import { Modal } from '../components/ui/Modal'
+import { Spinner } from '../components/ui/Spinner'
+import { mockUpdateUserEmail } from '../services/mock/mockServices'
 
 export const ProfilePage: React.FC = () => {
-  const { user, logout, toggleAdminRole } = useAuthStore()
+  const { user, logout, toggleAdminRole, updateUser } = useAuthStore()
   const { wallet } = useWalletStore()
   const { showToast } = useUIStore()
 
   const [isCopied, setIsCopied] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [editEmail, setEditEmail] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
 
   if (!user || !wallet) {
     return (
@@ -25,7 +31,7 @@ export const ProfilePage: React.FC = () => {
   }
 
   const handleCopyAccount = () => {
-    navigator.clipboard.writeText(wallet.accountNumber)
+    navigator.clipboard.writeText(wallet.accountNumber || '')
     setIsCopied(true)
     showToast('Account number copied!', 'info')
     setTimeout(() => setIsCopied(false), 2000)
@@ -53,6 +59,30 @@ export const ProfilePage: React.FC = () => {
     logout()
   }
 
+  const openEditModal = () => {
+    setEditEmail(user.email || '')
+    setIsEditModalOpen(true)
+  }
+
+  const handleSaveProfile = async () => {
+    if (!editEmail.trim()) {
+      showToast('Email cannot be empty', 'error')
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const updatedUser = await mockUpdateUserEmail(user.id, editEmail)
+      updateUser({ email: updatedUser.email })
+      showToast('Profile updated successfully', 'success')
+      setIsEditModalOpen(false)
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update profile', 'error')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background pb-32">
       <header className="bg-brand text-white px-6 pt-12 pb-8 rounded-b-3xl shadow-sm">
@@ -62,10 +92,20 @@ export const ProfilePage: React.FC = () => {
           <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center text-3xl font-bold border-2 border-white/30">
             {user.firstName.charAt(0)}
           </div>
-          <div>
+          <div className="flex-1">
             <h2 className="text-xl font-bold">{user.firstName} {user.lastName}</h2>
             <p className="opacity-90">{user.phone}</p>
+            <p className="opacity-75 text-sm">{user.email}</p>
           </div>
+          <button
+            onClick={openEditModal}
+            className="p-2 bg-white/20 rounded-xl hover:bg-white/30 transition-colors"
+            title="Edit Profile"
+          >
+            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+          </button>
         </div>
       </header>
 
@@ -190,6 +230,78 @@ export const ProfilePage: React.FC = () => {
           )}
         </section>
       </main>
+
+      {/* Edit Profile Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => !isSaving && setIsEditModalOpen(false)}
+        title="Edit Profile"
+      >
+        <div className="space-y-4">
+          <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex space-x-3">
+            <svg className="w-5 h-5 text-brand shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-xs text-brand font-medium">
+              To update your name or registered phone number, please contact administrative support for strict security verification.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1">First Name</label>
+              <input
+                type="text"
+                value={user.firstName}
+                disabled
+                className="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-sm text-text-muted cursor-not-allowed"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1">Last Name</label>
+              <input
+                type="text"
+                value={user.lastName}
+                disabled
+                className="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-sm text-text-muted cursor-not-allowed"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1">Phone Number</label>
+              <input
+                type="text"
+                value={user.phone}
+                disabled
+                className="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-sm text-text-muted cursor-not-allowed"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1">Email Address</label>
+              <input
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand"
+              />
+            </div>
+          </div>
+
+          <button
+            onClick={handleSaveProfile}
+            disabled={isSaving || editEmail === user.email}
+            className="w-full bg-brand text-white font-bold rounded-xl py-3.5 flex items-center justify-center space-x-2 transition-colors hover:bg-blue-800 disabled:bg-blue-300 mt-6"
+          >
+            {isSaving ? (
+              <>
+                <Spinner size="sm" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <span>Save Changes</span>
+            )}
+          </button>
+        </div>
+      </Modal>
     </div>
   )
 }

@@ -122,14 +122,19 @@ function txnRef(serviceCode: string): string {
  * Returns the created User (without wallet — wallet is created in `mockCreatePin`).
  */
 export async function mockSignup(data: SignupRequest): Promise<User> {
-  // Check for duplicate phone
-  const existing = db.users.find((u) => u.phone === data.phone)
-  if (existing) {
+  // Check for duplicate phone or email
+  const existingPhone = db.users.find((u) => u.phone === data.phone)
+  if (existingPhone) {
     return delayedError('An account with this phone number already exists.')
+  }
+  const existingEmail = db.users.find((u) => u.email === data.email)
+  if (existingEmail) {
+    return delayedError('An account with this email address already exists.')
   }
 
   const newUser: User = {
     id: uid('usr'),
+    email: data.email,
     phone: data.phone,
     firstName: data.firstName,
     lastName: data.lastName,
@@ -183,25 +188,109 @@ export async function mockCreatePin(userId: string, pin: string): Promise<Wallet
   const user = db.users.find((u) => u.id === userId)
   if (!user) return delayedError('User not found.')
 
-  if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+  if (pin.length !== 4 || !/^\\d{4}$/.test(pin)) {
     return delayedError('PIN must be exactly 4 digits.')
   }
 
   // Store PIN (plaintext for mock; hashed in production)
   user.pinHash = pin
 
-  // Provision wallet with DVA
+  // Provision wallet with NO DVA yet
   const wallet: Wallet = {
     id: uid('wal'),
     userId,
     balance: 0,
-    paystackCustomerCode: `CUS_mock_${Math.random().toString(36).slice(2, 8)}`,
-    accountNumber: user.phone.replace(/^0/, ''),   // Strip leading 0 for 10-digit DVA
-    bankName: 'Wema Bank',
   }
 
   db.wallets.push(wallet)
   return delayed(wallet)
+}
+
+/**
+ * Simulates Paystack Resolve Account API.
+ */
+export async function mockResolveBankAccount(_bankName: string, accountNumber: string): Promise<{ accountName: string }> {
+  if (accountNumber.length !== 10) {
+    return delayedError('Account number must be 10 digits.')
+  }
+  return delayed({ accountName: 'Simulated User Name' })
+}
+
+/**
+ * Simulates Paystack Customer Validation (BVN) and DVA creation.
+ * Note: BVN is accepted to simulate the payload but NEVER saved to the DB/Wallet.
+ */
+export async function mockCreateDVA(
+  userId: string,
+  bvn: string,
+  localBankName: string,
+  localAccountNumber: string
+): Promise<Wallet> {
+  const user = db.users.find((u) => u.id === userId)
+  if (!user) return delayedError('User not found.')
+
+  const wallet = db.wallets.find((w) => w.userId === userId)
+  if (!wallet) return delayedError('Wallet not found.')
+
+  if (bvn.length !== 11) {
+    return delayedError('BVN must be exactly 11 digits.')
+  }
+
+  wallet.paystackCustomerCode = `CUS_mock_${Math.random().toString(36).slice(2, 8)}`
+  wallet.accountNumber = user.phone.replace(/^0/, '') // 10-digit
+  wallet.bankName = 'Wema Bank'
+  wallet.localWithdrawalBank = localBankName
+  wallet.localWithdrawalAccount = localAccountNumber
+
+  return delayed({ ...wallet })
+}
+
+/**
+ * Simulates the withdrawal process.
+ */
+export async function mockProcessWithdrawal(userId: string, amount: number, pin: string): Promise<Transaction> {
+  const user = db.users.find((u) => u.id === userId)
+  if (!user) return delayedError('User not found.')
+
+  if (user.pinHash !== pin) {
+    return delayedError('Invalid PIN.')
+  }
+
+  const wallet = db.wallets.find((w) => w.userId === userId)
+  if (!wallet) return delayedError('Wallet not found.')
+
+  if (!wallet.localWithdrawalBank || !wallet.localWithdrawalAccount) {
+    return delayedError('No withdrawal bank account linked.')
+  }
+
+  if (amount <= 0) {
+    return delayedError('Amount must be greater than zero.')
+  }
+
+  if (wallet.balance < amount) {
+    return delayedError('Insufficient balance.')
+  }
+
+  // Simulate network processing delay before debiting
+  await new Promise((resolve) => setTimeout(resolve, 1500))
+
+  wallet.balance -= amount
+
+  const txn: Transaction = {
+    id: uid('txn'),
+    userId,
+    reference: txnRef('WTH'),
+    type: 'Debit',
+    service: 'Funding', // Treat withdrawal under funding/wallet operations
+    amount,
+    status: 'Success',
+    createdAt: new Date().toISOString(),
+    recipient: `${wallet.localWithdrawalBank} - ${wallet.localWithdrawalAccount}`,
+    planName: 'Wallet Withdrawal',
+  }
+
+  db.transactions.unshift(txn)
+  return txn
 }
 
 /**
@@ -233,6 +322,22 @@ export async function mockLogin(phone: string, pin: string): Promise<User> {
     return delayedError('This account has been suspended. Please contact support.')
   }
 
+  return delayed(user)
+}
+
+/**
+ * Update the authenticated user's email address.
+ */
+export async function mockUpdateUserEmail(userId: string, email: string): Promise<User> {
+  const user = db.users.find((u) => u.id === userId)
+  if (!user) return delayedError('User not found.')
+
+  const existingEmail = db.users.find((u) => u.email === email && u.id !== userId)
+  if (existingEmail) {
+    return delayedError('An account with this email address already exists.')
+  }
+
+  user.email = email
   return delayed(user)
 }
 
@@ -497,6 +602,7 @@ export async function mockAdminCreateAnnouncement(
 export async function mockAdminFundWallet(
   userId: string,
   amount: number,
+  reason: string,
 ): Promise<void> {
   const wallet = db.wallets.find((w) => w.userId === userId)
   if (!wallet) return delayedError('Wallet not found for this user.')
@@ -515,6 +621,7 @@ export async function mockAdminFundWallet(
     amount,
     status: 'Success',
     createdAt: new Date().toISOString(),
+    planName: `Admin credit: ${reason}`,
   }
   db.transactions.unshift(txn)
 
@@ -631,6 +738,34 @@ export async function mockAdminUnbanUser(userId: string): Promise<void> {
 
   user.isBanned = false
   return delayed(undefined)
+}
+
+/**
+ * Reset a user's PIN to '0000'.
+ */
+export async function mockAdminResetPin(userId: string): Promise<void> {
+  const user = db.users.find((u) => u.id === userId)
+  if (!user) return delayedError('User not found.')
+
+  user.pinHash = '0000'
+  return delayed(undefined)
+}
+
+/**
+ * Fetch a user's complete ledger (details, wallet, and transactions) for Admin view.
+ */
+export async function mockAdminGetUserLedger(userId: string): Promise<{
+  user: User
+  wallet: Wallet | null
+  transactions: Transaction[]
+}> {
+  const user = db.users.find((u) => u.id === userId)
+  if (!user) return delayedError('User not found.')
+
+  const wallet = db.wallets.find((w) => w.userId === userId) || null
+  const transactions = db.transactions.filter((t) => t.userId === userId)
+
+  return delayed({ user, wallet, transactions })
 }
 
 // ═══════════════════════════════════════════════════════════

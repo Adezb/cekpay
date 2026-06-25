@@ -32,6 +32,8 @@ import { DataModal } from '../components/features/DataModal'
 import { ElectricityModal } from '../components/features/ElectricityModal'
 import { CableModal } from '../components/features/CableModal'
 import { ReceiptModal } from '../components/features/ReceiptModal'
+import { CreateWalletModal } from '../components/features/CreateWalletModal'
+import { WithdrawModal } from '../components/features/WithdrawModal'
 
 export const DashboardPage: React.FC = () => {
   const user = useAuthStore((state) => state.user)
@@ -169,6 +171,8 @@ export const DashboardPage: React.FC = () => {
       <ElectricityModal />
       <CableModal />
       <ReceiptModal />
+      <CreateWalletModal />
+      <WithdrawModal />
     </div>
   )
 }

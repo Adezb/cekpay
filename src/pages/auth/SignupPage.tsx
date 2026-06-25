@@ -15,11 +15,14 @@ export function SignupPage() {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
+  const [hasConsented, setHasConsented] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Validation
   const isValidPhone = isValidNigerianPhone(phone)
-  const isFormValid = firstName.trim().length > 1 && lastName.trim().length > 1 && isValidPhone
+  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  const isFormValid = firstName.trim().length > 1 && lastName.trim().length > 1 && isValidPhone && isValidEmail && hasConsented
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,6 +36,7 @@ export function SignupPage() {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         phone: phone.trim(),
+        email: email.trim(),
       })
 
       // 2. Generate and "send" the pass
@@ -98,6 +102,34 @@ export function SignupPage() {
         <p className="text-xs text-slate-500 mt-1 pl-1">
           Enter 11 digits starting with 0
         </p>
+
+        <Input
+          label="Email Address"
+          placeholder="e.g. name@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          disabled={isSubmitting}
+          required
+          type="email"
+          autoComplete="email"
+        />
+
+        <div className="flex items-start space-x-3 pt-2">
+          <input
+            type="checkbox"
+            id="consent"
+            checked={hasConsented}
+            onChange={(e) => setHasConsented(e.target.checked)}
+            disabled={isSubmitting}
+            className="mt-1 w-4 h-4 text-brand bg-slate-100 border-slate-300 rounded focus:ring-brand focus:ring-2"
+          />
+          <label htmlFor="consent" className="text-xs text-slate-600 leading-snug">
+            I agree to the{' '}
+            <Link to="/terms" className="font-semibold text-brand hover:underline">Terms of Service</Link>
+            {' '}and{' '}
+            <Link to="/privacy" className="font-semibold text-brand hover:underline">Privacy Policy</Link>.
+          </label>
+        </div>
 
         <div className="pt-2">
           <Button

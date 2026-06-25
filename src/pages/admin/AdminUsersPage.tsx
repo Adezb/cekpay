@@ -5,8 +5,11 @@ import {
   mockAdminDebitWallet,
   mockAdminBanUser,
   mockAdminUnbanUser,
+  mockAdminResetPin,
+  mockAdminGetUserLedger,
   type AdminUserView
 } from '../../services/mock/mockServices'
+import type { Transaction, Wallet } from '../../types'
 import { formatNaira } from '../../utils/formatCurrency'
 import { Modal } from '../../components/ui/Modal'
 import { Spinner } from '../../components/ui/Spinner'
@@ -21,12 +24,17 @@ export const AdminUsersPage: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'banned'>('all')
 
   const [selectedUser, setSelectedUser] = useState<AdminUserView | null>(null)
-  const [activeModal, setActiveModal] = useState<'fund' | 'debit' | 'ban' | 'profile' | null>(null)
+  const [activeModal, setActiveModal] = useState<'fund' | 'debit' | 'ban' | 'resetPin' | 'viewLedger' | null>(null)
   
   // Modal Inputs
   const [amountInput, setAmountInput] = useState('')
   const [reasonInput, setReasonInput] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
+  
+  // Ledger Data
+  const [ledgerTransactions, setLedgerTransactions] = useState<Transaction[]>([])
+  const [ledgerWallet, setLedgerWallet] = useState<Wallet | null>(null)
+  const [isLoadingLedger, setIsLoadingLedger] = useState(false)
 
   const fetchUsers = () => {
     setIsLoading(true)
@@ -57,11 +65,24 @@ export const AdminUsersPage: React.FC = () => {
   }, [users, searchQuery, filterStatus])
 
   // Actions
-  const handleAction = (user: AdminUserView, action: 'fund' | 'debit' | 'ban' | 'profile') => {
+  const handleAction = async (user: AdminUserView, action: 'fund' | 'debit' | 'ban' | 'resetPin' | 'viewLedger') => {
     setSelectedUser(user)
     setAmountInput('')
     setReasonInput('')
     setActiveModal(action)
+
+    if (action === 'viewLedger') {
+      setIsLoadingLedger(true)
+      try {
+        const { transactions, wallet } = await mockAdminGetUserLedger(user.id)
+        setLedgerTransactions(transactions)
+        setLedgerWallet(wallet)
+      } catch (err: any) {
+        showToast(err.message || 'Failed to load ledger', 'error')
+      } finally {
+        setIsLoadingLedger(false)
+      }
+    }
   }
 
   const closeModal = () => {
@@ -79,7 +100,8 @@ export const AdminUsersPage: React.FC = () => {
     try {
       if (activeModal === 'fund') {
         if (numAmount <= 0) throw new Error('Amount must be greater than zero')
-        await mockAdminFundWallet(selectedUser.id, numAmount)
+        if (!reasonInput) throw new Error('Reason is required for funding')
+        await mockAdminFundWallet(selectedUser.id, numAmount, reasonInput)
         showToast(`Successfully funded ₦${numAmount.toLocaleString()}`, 'success')
       } else if (activeModal === 'debit') {
         if (numAmount <= 0) throw new Error('Amount must be greater than zero')
@@ -94,6 +116,9 @@ export const AdminUsersPage: React.FC = () => {
           await mockAdminBanUser(selectedUser.id)
           showToast('User has been banned.', 'success')
         }
+      } else if (activeModal === 'resetPin') {
+        await mockAdminResetPin(selectedUser.id)
+        showToast(`PIN reset to '0000' for ${selectedUser.firstName}.`, 'success')
       }
       
       closeModal()
@@ -185,9 +210,11 @@ export const AdminUsersPage: React.FC = () => {
                     <td className="px-6 py-4 text-right space-x-2">
                       <button onClick={() => handleAction(u, 'fund')} className="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors">Fund</button>
                       <button onClick={() => handleAction(u, 'debit')} className="text-xs font-bold text-orange-600 hover:text-orange-800 bg-orange-50 hover:bg-orange-100 px-3 py-1.5 rounded-lg transition-colors">Debit</button>
+                      <button onClick={() => handleAction(u, 'resetPin')} className="text-xs font-bold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition-colors">Reset PIN</button>
                       <button onClick={() => handleAction(u, 'ban')} className="text-xs font-bold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition-colors">
                         {u.isBanned ? 'Unban' : 'Ban'}
                       </button>
+                      <button onClick={() => handleAction(u, 'viewLedger')} className="text-xs font-bold text-brand hover:text-brand bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors">View Ledger</button>
                     </td>
                   </tr>
                 ))}
@@ -211,10 +238,12 @@ export const AdminUsersPage: React.FC = () => {
         title={
           activeModal === 'fund' ? 'Fund Wallet' :
           activeModal === 'debit' ? 'Debit Wallet' :
-          activeModal === 'ban' ? (selectedUser?.isBanned ? 'Unban User' : 'Ban User') : ''
+          activeModal === 'ban' ? (selectedUser?.isBanned ? 'Unban User' : 'Ban User') : 
+          activeModal === 'resetPin' ? 'Reset PIN' :
+          activeModal === 'viewLedger' ? 'User Ledger' : ''
         }
       >
-        {selectedUser && (
+        {selectedUser && activeModal !== 'viewLedger' && (
           <div className="space-y-5">
             <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
               <p className="text-sm font-semibold text-text-primary">{selectedUser.firstName} {selectedUser.lastName}</p>
@@ -234,18 +263,16 @@ export const AdminUsersPage: React.FC = () => {
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-lg font-medium focus:outline-none focus:ring-2 focus:ring-brand"
                   />
                 </div>
-                {activeModal === 'debit' && (
-                  <div className="space-y-1.5">
-                    <label className="block text-sm font-semibold text-text-primary">Reason for Debit</label>
-                    <input
-                      type="text"
-                      value={reasonInput}
-                      onChange={(e) => setReasonInput(e.target.value)}
-                      placeholder="e.g. Reversal adjustment"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-                    />
-                  </div>
-                )}
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-semibold text-text-primary">Reason for {activeModal === 'fund' ? 'Funding' : 'Debit'}</label>
+                  <input
+                    type="text"
+                    value={reasonInput}
+                    onChange={(e) => setReasonInput(e.target.value)}
+                    placeholder={activeModal === 'fund' ? "e.g. Promo reward" : "e.g. Reversal adjustment"}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+                  />
+                </div>
               </div>
             )}
 
@@ -258,12 +285,18 @@ export const AdminUsersPage: React.FC = () => {
               </p>
             )}
 
+            {activeModal === 'resetPin' && (
+              <p className="text-sm text-text-secondary">
+                Are you sure you want to reset this user's PIN? Their new PIN will be <strong className="text-text-primary">0000</strong>.
+              </p>
+            )}
+
             <button
               onClick={executeAction}
               disabled={
                 isProcessing ||
                 ((activeModal === 'fund' || activeModal === 'debit') && parseInt(amountInput.replace(/\D/g, '') || '0', 10) <= 0) ||
-                (activeModal === 'debit' && !reasonInput.trim())
+                ((activeModal === 'fund' || activeModal === 'debit') && !reasonInput.trim())
               }
               className={`w-full font-bold rounded-xl py-3.5 flex items-center justify-center space-x-2 transition-colors
                 ${activeModal === 'ban' && !selectedUser.isBanned 
@@ -281,6 +314,62 @@ export const AdminUsersPage: React.FC = () => {
                 <span>Confirm Action</span>
               )}
             </button>
+          </div>
+        )}
+
+        {selectedUser && activeModal === 'viewLedger' && (
+          <div className="space-y-6">
+            {isLoadingLedger ? (
+              <div className="flex flex-col items-center justify-center py-10">
+                <Spinner size="md" />
+                <span className="text-sm text-text-muted mt-2">Loading ledger...</span>
+              </div>
+            ) : (
+              <>
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-text-muted mb-2">Virtual Account Details</h3>
+                  {ledgerWallet?.accountNumber ? (
+                    <div>
+                      <p className="text-sm font-semibold text-text-primary">{ledgerWallet.bankName}</p>
+                      <p className="text-lg font-bold text-text-primary tracking-wide font-mono">{ledgerWallet.accountNumber}</p>
+                      <p className="text-xs text-text-muted mt-1">Balance: {formatNaira(ledgerWallet.balance)}</p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-text-muted">No Virtual Account generated.</p>
+                  )}
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-bold text-text-primary mb-3">Transaction History</h3>
+                  {ledgerTransactions.length === 0 ? (
+                    <p className="text-sm text-text-muted py-4 text-center bg-slate-50 rounded-xl border border-slate-100">No transactions found.</p>
+                  ) : (
+                    <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                      {ledgerTransactions.map(txn => (
+                        <div key={txn.id} className="flex justify-between items-center p-3 bg-white border border-slate-100 rounded-xl shadow-sm">
+                          <div>
+                            <p className="text-sm font-bold text-text-primary">{txn.service} - {txn.type}</p>
+                            <p className="text-xs text-text-muted">{new Date(txn.createdAt).toLocaleString()}</p>
+                            {txn.planName && <p className="text-xs text-text-muted mt-1 truncate max-w-[200px]">{txn.planName}</p>}
+                          </div>
+                          <div className="text-right">
+                            <p className={`text-sm font-bold ${txn.type === 'Credit' ? 'text-success' : 'text-text-primary'}`}>
+                              {txn.type === 'Credit' ? '+' : '-'}{formatNaira(txn.amount)}
+                            </p>
+                            <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                              txn.status === 'Success' ? 'bg-green-100 text-green-700' :
+                              txn.status === 'Failed' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                            }`}>
+                              {txn.status}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
       </Modal>

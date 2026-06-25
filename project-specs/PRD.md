@@ -2,91 +2,70 @@
 **Product Name:** CEKPay
 **Parent Company:** CEK TOP VENTURES LTD (RC Registered)
 **Target Audience:** Everyday Consumers in Nigeria (B2C Focus)
-**Core Value Proposition:** "The Speedboat of VTU" — Unmatched speed, zero visual clutter, 2-tap transactions, and guaranteed instant reversals for failed transactions.
+**Core Value Proposition:** "The Speedboat of VTU" — Unmatched speed, zero visual clutter, persistent app-lock security, masked data density, and guaranteed zero-liability identity processing.
 
 ## 1. Product Overview
-CEKPay is a modern, high-speed Virtual Top-Up (VTU) and bill payment web application designed specifically for the Nigerian consumer market. Unlike bulky "super apps," CEKPay focuses entirely on utility velocity: allowing users to buy Airtime, Data, Electricity tokens, and Cable TV subscriptions with zero friction.
+CEKPay is a modern, high-speed Virtual Top-Up (VTU) and bill payment web application. It focuses on utility velocity: allowing users to buy Airtime, Data, Electricity tokens, and Cable TV subscriptions with minimal friction while maintaining strict compliance with Nigerian financial regulations through non-custodial, zero-storage KYC processing.
 
-### 1.1 Technical Stack (Strict Enforcement)
-- **Frontend Framework:** React + Vite + TypeScript.
+### 1.1 Technical Stack
+- **Frontend Framework:** React + Vite + TypeScript (PWA).
 - **Styling:** Tailwind CSS (Minimalist, glassmorphism UI/UX).
 - **Backend & Database:** Supabase (PostgreSQL, Edge Functions, Row Level Security, Auth).
-- **Primary Payment/Wallet Processor:** Paystack (Dedicated Virtual Accounts).
-- **VTU/Utility Aggregators:** Toppa Hub Digital API (Primary Data/Airtime) & VTpass API (Primary Bills / Fallback Data).
+- **Primary Payment/Wallet Processor:** Paystack (Dedicated Virtual Accounts & Inbound Settlements).
+- **VTU/Utility Aggregators:** Toppa Hub Digital (Primary) & VTpass (Fallback). *(Architecture supports easy integration of SMEPlug or CheapDataHub later).*
+- **SMS Gateway:** BulkSMSNigeria (Custom alphanumeric delivery).
+- **Email Gateway:** Resend API (Transactional secure authentication email).
 
 ---
 
 ## 2. Core Features (Frontend)
 
-### 2.1 Frictionless Onboarding & Auth
-- Users sign up with exactly 4 fields: Phone Number (with OTP verification), First Name, Last Name, and a 4-digit Transaction PIN.
-- BVN/NIN is **not** required for Tier 1 limits (to maximize instant conversions).
-- **Background Action:** Upon PIN creation, the system triggers the Paystack API to instantly generate a Dedicated Virtual Account (DVA) linked to the user's wallet.
+### 2.1 Frictionless Onboarding, Compliance & App Lock
+- **Signup Inputs:** First Name, Last Name, Phone Number, and Email Address.
+- **T&C Compliance:** The signup form includes a mandatory consent checkbox linked explicitly to the **Privacy Policy** and **Terms of Service** pages. The "Send Pass" submission button is **strictly disabled** until this box is checked.
+- **Dual-Channel OTP Validation:** Once "Send Pass" is fired, the backend generates an **alphanumeric code** (e.g., A7X9TP) to bypass telco DND filters. It delivers this code simultaneously through two channels:
+  1. An SMS copy via BulkSMSNigeria avoiding words like "OTP" or "Code" and using "Pass" (e.g., "Your CEKPay Pass is A7X9TP").
+  2. A clean transactional email via the Resend API containing the exact matching Pass code.
+- **Persistent App Lock (Cost Saving):** To minimize ongoing SMS/Email verification overheads, users remain persistently logged in. If the application is closed or stays inactive, a secure pin-lock shield intercepts the routing, requiring the user to supply their 4-digit PIN to unlock their dashboard canvas.
 
-### 2.2 The "Speedboat" Dashboard
+### 2.2 The Progressive KYC Wallet Flow (Strict Paystack Compliance)
+- **Initial State:** Upon signup, the user lands on the dashboard with a local balance of ₦0.00 but **NO** Dedicated Virtual Account (DVA). The card renders a masked balance (`****`) and displays a prominent **"Create Wallet"** button.
+- **Step 1 (Local Bank Binding):** Clicking "Create Wallet" for the first time redirects the user to link a personal local bank account (Bank Name and Account Number). The backend runs this through Paystack's Resolve Account API to verify their identity. This account is permanently saved for processing user payouts/withdrawals.
+- **Step 2 (Vetting, Consent & DVA Request):** When the user clicks "Create Wallet" a second time, a modal overlay displays their fetched registration details for final confirmation: Full Name, Email, and Linked Local Bank Account details. Below this vetting display is an empty, on-the-spot **BVN text input field** and a mandatory **DVA Generation Consent Checkbox**.
+- **The Zero-Liability Security Rule:** To legally and completely insulate CEKPay from identity data theft liability, **the user's BVN is never stored in the Supabase PostgreSQL database**. The frontend passes the field directly to a secure Supabase Edge Function proxy, which submits it live to Paystack for Customer Validation and discards the token immediately from active memory.
+- **Active State:** Once Paystack validates the profile and deploys the DVA, the dashboard updates to display the account numbers (Wema/Titan), and the primary toggle permanently alters from "Create Wallet" to **"Fund Wallet"**.
+
+### 2.3 The "Speedboat" Dashboard
 - A clean, uncluttered interface. No ads, no loan offers.
-- **Top Section:** Displays Wallet Balance and the static Paystack Virtual Account Details (e.g., *Wema Bank - 0123456789*).
+- **Top Section:** Displays Wallet Balance masked by default as `****` with an eyeball utility toggle to reveal the true currency numbers. 
+- **Action Buttons:** The main card houses two clear functional toggles:
+  - **Create Wallet / Fund Wallet** (Dynamically rendering based on DVA assignment state).
+  - **Withdraw** (Opens a secure PIN-authorized modal allowing instant payout of excess wallet funds straight back to their pre-linked local bank account).
 - **Core Actions:** Four massive buttons: Airtime, Data, Electricity, Cable TV.
-- **Smart Contacts:** A directory showing previously saved numbers/meters (e.g., "Mom's Phone", "Home Meter").
+- **Smart Contacts:** A directory showing up to 10 previously saved numbers/meters.
 
-### 2.3 The "Two-Tap" Transaction Flow
+### 2.4 The "Two-Tap" Transaction Flow
 - The app automatically detects the user's network carrier from their phone number.
 - Users select a plan, input their 4-digit PIN, and purchase. 
-- Target transaction completion time: Under 5 seconds.
-
-### 2.4 Information & Announcement Banner
-- A prominent but clean notification area at the top of the dashboard.
-- Dynamically displays real-time updates broadcasted from the admin panel (e.g., *"MTN Data prices adjusted due to network updates,"* or *"Weekend Promo: Get 5% bonus points on all electricity payments!"*).
-
-### 2.5 Customer Support Floating Action Button (FAB)
-- A persistent, floating support button in the bottom right corner of the screen (matching the ROT8 user experience).
-- Clicking the button opens a clean micro-modal or direct link routing the user seamlessly to **CEKPay WhatsApp Business Support** or an integrated live-chat widget for instant human assistance.
-
-### 2.6 The "Magic Moment" Receipt Generation
-- Upon success, the app generates a highly stylized, branded image receipt (not a plain text block).
-- Includes a native "Share to WhatsApp" button for easy forwarding.
+- If a promo code is available, it is calculated and applied at the PIN-entry stage before deduction.
 
 ---
 
 ## 3. Core Features (Backend & Admin Panel)
 
-### 3.1 Financial Infrastructure (Paystack Compliance)
-- **Business Configuration:** Set up under Paystack as "Registered Business" mapped to CEK TOP VENTURES LTD.
-- **Category:** `Utilities -> Bill-payments` (Crucial for DVA compliance and high-velocity processing).
-- **Projected Volume:** ₦100,000,000+ (To prevent automated risk flags during scaling).
-- **Webhook Processing:** A dedicated Supabase Edge Function to securely listen to Paystack `charge.success` events and instantly credit the user's database wallet.
+### 3.1 Financial Infrastructure & Withdrawals
+- **Webhook Processing:** A dedicated Supabase Edge Function listens to Paystack `charge.success` events to instantly credit the user's database wallet.
+- **Withdrawals:** Users can only withdraw to the specific local bank account they linked during the KYC phase, preventing fraud and money laundering.
 
 ### 3.2 The "Circuit Breaker" Auto-Failover System
 - To guarantee 99.9% uptime, CEKPay uses a multi-aggregator strategy.
 - **Logic:** Backend pings the Primary API first. If it times out (> 10 seconds) or returns an error, the system automatically aborts and re-routes the request to the Secondary API without alerting the user.
 
 ### 3.3 The "Instant Reversal" Guarantee
-- **Logic:** If an aggregator returns a definitive failure response (e.g., invalid meter number or downstream telco failure), the transaction must NOT be stuck in "Pending."
-- The backend must instantly reverse the deducted amount back to the user's wallet, triggering an immediate UI modal notification.
+- **Logic:** If an aggregator returns a definitive failure response, the transaction must NOT be stuck in "Pending." The backend instantly reverses the deducted amount back to the user's wallet.
 
 ### 3.4 Extended Admin Panel Capabilities (Business Operations)
-- **User Management Center:** 
-  - Search, view, and filter all registered CEKPay users.
-  - View individual user profiles, transaction histories, and active wallet balances.
-  - Administrative override controls: Ability to manually fund/debit a wallet (for correction scenarios), or Ban/Unban users instantly.
-- **Dynamic Product Pricing Engine:**
-  - View raw cost prices fetched from your active aggregators (Toppa, VTpass).
-  - Globally set, update, and manage retail prices/markups for every individual data plan, airtime tier, electricity disco, and cable TV package sold on the frontend.
-- **Promo & Bonus Management System:**
-  - Configure entry-level welcome bonuses, point-multiplier events, or transaction cashbacks.
-  - Set custom validity windows and rule triggers for promotional campaigns.
-- **Information & Announcement Control Room:**
-  - Create, publish, edit, and archive site-wide announcements.
-  - Target these messages to appear dynamically in the frontend information center to instantly communicate critical operational shifts, price drops, or promotional events.
-
----
-
-## 4. Database High-Level Requirements (Supabase)
-- **`users` table:** Links to Supabase Auth. Stores Name, Phone, PIN hash, status (Active/Banned).
-- **`wallets` table:** Stores Paystack customer ID, Virtual Account Details, and current balance.
-- **`transactions` table:** Stores reference ID, type, category, amount, status, and the aggregator used.
-- **`product_prices` table:** Stores product identifiers, aggregator cost price, and the admin-configured retail price for frontend rendering.
-- **`announcements` table:** Stores text content, active status flag, and priority levels for frontend display.
-- **`promos` table:** Stores campaign metadata, discount/bonus percentages, and conditional triggers.
-- **`smart_contacts` table:** Stores user_id, alias, identifier, and provider type. 
-- **Security:** Strict Row Level Security (RLS) policies. Users can only read/write their own personal data. Admin mutations require specialized system-role or service-key privileges.
+- **User Management Ledger:** View individual user profiles, transaction histories, linked settlement bank parameters, and active wallet balances.
+  - Administrative actions include: View Ledger, Adjust Balance (requires mandatory 'Reason' input for refunds/reversals), Reset User PIN, and Suspend/Ban User.
+- **Dynamic Product Pricing Engine:** Globally set retail prices for frontend rendering.
+- **Promo & Bonus Management System:** Create codes (e.g., CEKLAUNCH) that calculate discounts dynamically during the user's checkout flow.

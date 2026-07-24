@@ -24,6 +24,18 @@ The manifest must be configured inside `vite-plugin-pwa` to trigger the "Add to 
 
 ---
 
+### 1.3 OneSignal Web SDK & Push Notification Setup
+To enable cross-platform push delivery (Web, Android, iOS) without managing raw Web Push subscriptions:
+- **SDK Initialization:** Initialize the OneSignal Web SDK (v16+) on app launch in `src/main.tsx` / `App.tsx` using `OneSignal.init({ appId: import.meta.env.VITE_ONESIGNAL_APP_ID, allowLocalhostAsSecureOrigin: true })`.
+- **Service Worker Co-Existence:**
+  - Place `OneSignalSDKWorker.js` in the `public/` directory so it is served at root level (`/OneSignalSDKWorker.js`).
+  - Workbox (via `vite-plugin-pwa`) generates `sw.js` for app shell asset caching. Workbox runtime caching must exclude `OneSignalSDKWorker.js` to ensure the OneSignal worker operates independently without asset cache interference or scope conflicts.
+- **User Identity Mapping (`external_id`):**
+  - Upon successful Supabase authentication (login/signup), map the user by executing `OneSignal.login(user.id)`, linking their OneSignal registration to their Supabase `user_id` as the `external_id`.
+  - Upon user sign out, call `OneSignal.logout()` to sever the session mapping.
+
+---
+
 ## 2. PWA UI/UX Mobile Enhancements
 
 To ensure CEKPay feels indistinguishable from a native downloaded app, the frontend must implement the following mobile-web optimizations:

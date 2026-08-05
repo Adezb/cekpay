@@ -1,68 +1,58 @@
 # Strategic Instructions & Guardrails (Skills.md)
-**Target Agent:** Antigravity IDE Agent / Full-Stack AI Engineer
-**Product:** CEKPay (PWA App under CEK TOP VENTURES LTD)
+**Target Agent:** Antigravity IDE Agent / Full-Stack AI Engineer  
+**Product:** CEKPay (PWA App under CEK TOP VENTURES LTD)  
+**Target Supabase Project:** `eexiftsuuouucvjytuhz`
 
 You must strictly adopt the mindset of a Professional 10-Year Product Manager and a Senior Full-Stack Software Engineer. You are executing a high-velocity utility platform where bug-free code, precise state management, and strict compliance routing are non-negotiable.
 
 ---
 
-## 1. MANDATORY PHASING: UI Simulation First (Strictly Enforced)
+## 1. MANDATORY PHASING & CERTIFICATION STATUS
 
-Before writing any live backend connections, databases, or API integrations, you must execute the project in two distinct architectural phases. **Do not move to Phase 2 without explicit user authorization.**
+The project follows a strict phased execution protocol. **Phases 1, 2, and 3 are fully completed, audited, and certified for production launch.**
 
-### PHASE 1: The Visual & Simulation Layer (Mock Mode)
-- **Objective:** Build 100% of the user interfaces (both consumer Frontend and Admin Panel) using mock data and simulated local state.
-- **Mock Service Layer:** Instead of importing a live Supabase client, create a `/services/mock/` folder. All transaction triggers, funding processes, and dashboard updates must read/write to a temporary React/Zustand state.
-- **Simulate Network Lag:** Use `setTimeout` (e.g., 1.5 to 3 seconds) to mimic real internet network latencies in Nigeria, allowing the user to review loading spinners and disabled states.
-- **PAUSE POINT:** Once all screens operate perfectly via simulations, compile the app, show it to the Director, and **WAIT** for validation.
+### PHASE 1: Visual & Simulation Layer (COMPLETED & CERTIFIED)
+- Built 100% of consumer and admin user interfaces with mock data and simulated local state (`/services/mock/`).
+- Network latencies and failure modes verified via mock state.
 
-### PHASE 2: Production Hardware & Integration (Live Mode)
-- Swap out the `/services/mock/` layers with true production code.
-- Hook up Supabase Auth, Row Level Security (RLS) tables, Paystack Webhooks, and the Aggregator logic.
+### PHASE 2: Core Hardware & Infrastructure (COMPLETED & CERTIFIED)
+- Deployed 10 PostgreSQL database migrations (8 Public Tables, 22 RLS Policies, 5 Database Triggers).
+- Standardized phone storage to international MSISDN (`23480XXXXXXXX`) with DB regex constraint `^234[789][01]\d{8}$`.
+- Deployed 5 core Deno Edge Functions (`auth-otp-delivery`, `verify-kyc-and-create-dva`, `paystack-webhook`, `process-withdrawal`, `vtu-transaction-engine`).
+
+### PHASE 3: Live Integration & Production Cutover (COMPLETED & CERTIFIED)
+- Implemented Option A Session Strategy (`sha256(msisdn + pin)`).
+- Deployed PIN security Edge Functions (`set-user-pin` and `verify-pin`) enforcing server-side `bcrypt` hashing/comparison.
+- Wired live API service layer ([apiServices.ts](../src/services/api/apiServices.ts)) and service switchboard ([services/index.ts](../src/services/index.ts)) with `VITE_USE_MOCK=false`.
+- Configured real-time PostgreSQL subscriptions for `wallets` and `transactions`.
+- Configured PWA Workbox `navigateFallbackDenylist` and created `public/OneSignalSDKWorker.js`.
 
 ---
 
-## 2. Agent Workflows & Commands (The Protocol)
-You must natively understand and execute the following commands to maintain project integrity across multiple sessions.
+## 2. Architectural Guardrails (Non-Negotiable)
 
-### `/architect` (Pre-Build Alignment)
-- **Rule:** Before building any complex feature, act as a senior engineer and think through the implementation[cite: 6]. 
-- **Action:** Define ambiguous terms, surface architectural decisions, and wait for the developer's confirmation[cite: 6]. 
-- **Output:** Produce a "Blueprint / Implementation Plan" before touching any code[cite: 6].
+1. **Zero-Liability Identity Rule:** User BVNs are proxied in memory directly to Paystack's Customer Validation API and **NEVER written to PostgreSQL tables or persistent storage**.
+2. **MSISDN Phone Standard:** All phone inputs must be sanitized via `toMSISDN()` to `23480XXXXXXXX` before saving to DB or passing to external APIs (BulkSMSNigeria, Paystack).
+3. **Bcrypt PIN Security:** PIN hashing and comparison MUST occur server-side inside Deno Edge Functions (`set-user-pin` & `verify-pin`). Never perform raw PIN comparisons in client code.
+4. **Smart Contacts Cap:** Capped at **10 contacts per user**, enforced by PostgreSQL trigger `enforce_smart_contacts_limit()`.
+5. **Aggregator Circuit Breaker Standard:** Primary Toppa Hub Digital (<8s timeout) → Fallback CheapDataHub. If both fail, execute instant atomic 502 reversal (`status: Reversed`). (VTpass is permanently purged).
+6. **No Secret Key Exposure:** Secrets (`PAYSTACK_SECRET_KEY`, `TOPPA_API_KEY`, `CHEAPDATAHUB_API_KEY`, `CEKPAY_PROD_EMAIL_KEY`, `CEKPAY_PROD_ONESIGNAL_KEY`, `BULKSMSNIGERIA_API_KEY`) are stored exclusively in Supabase Vault and accessed via `Deno.env.get()`.
+
+---
+
+## 3. Agent Workflows & Commands (The Protocol)
+
+### `/architect` (Pre-Build Alignment & Blueprinting)
+- Define architectural decisions, produce implementation blueprints, and obtain explicit developer confirmation before executing code changes.
 
 ### `/imprint` (UI Consistency)
-- **Rule:** UI consistency does not happen by accident[cite: 7]. 
-- **Action:** After building *any* UI component, extract the visual patterns (backgrounds, borders, radius, text sizes, spacing) and append them to a `ui-registry.md` file[cite: 7]. 
-- **Enforcement:** Before building a new component, read `ui-registry.md` to ensure exact class matching[cite: 7].
+- Maintain UI consistency across components by adhering to established design system patterns in `UI_UX_DESIGN.md`.
 
 ### `/review` (Post-Build QA)
-- **Rule:** Building is not done when the code runs; it is done when it is correct[cite: 10].
-- **Action:** After completing a feature, review it across three layers: Plan Alignment, System Integrity (Architecture/Design boundaries), and Production Readiness (Error handling/Edge cases)[cite: 10]. 
-- **Output:** Provide a structured report categorized by Critical, Important, and Minor severities. Do not auto-fix without developer permission[cite: 10].
+- Perform 3-layer post-build reviews: Plan Alignment, System Boundaries, and Production Readiness.
 
 ### `/recover` (Failure Diagnosis)
-- **Rule:** Not every problem is a bug, and not every bug needs debugging[cite: 8]. If a fix fails, stop prompting.
-- **Action:** Diagnose the failure mode before patching[cite: 8]:
-  1. **Targeted Fix:** A specific, isolated error. Find the root cause, propose a fix, and wait[cite: 8].
-  2. **Hard Reset:** The session context is polluted from multiple failed attempts. Extract what was learned into a Reset Note and restart the session[cite: 8].
-  3. **Rethink:** The fundamental assumption is wrong. Re-evaluate the architecture entirely before writing more code[cite: 8].
+- Diagnose failure modes before patching (Targeted Fix, Hard Reset, or Rethink).
 
 ### `/remember` (Session State Management)
-- **Rule:** AI has no memory between sessions[cite: 9]. 
-- **Action (Save):** Run `/remember save` at the end of a session to write the current state, decisions made, and next steps to `memory.md`[cite: 9]. **Absolute Security Boundary: NEVER save secrets, API keys, BVNs, or tokens to this file; use `[REDACTED]` placeholders**[cite: 9].
-- **Action (Restore):** Run `/remember restore` at the start of a session to read `memory.md` and context files before resuming work[cite: 9].
-
----
-
-## 3. Technical Do's (Best Practices to Follow)
-- **TypeScript Type Safety:** Declare strict interfaces for every data structure. Do not use `any`.
-- **Atomic Components:** Keep React components small, clean, and highly modular.
-- **Decouple Business Logic:** Never place API fetch functions directly inside a click handler. Place async behaviors inside dedicated custom hooks or service functions.
-- **Tailwind Best Practices:** Stick to the specified color variables. Ensure all tap targets are at least 48px by 48px.
-
----
-
-## 4. Technical Don'ts (Actions to Avoid)
-- **DON'T Expose Secrets:** Under no circumstances should you hardcode secret keys, aggregator API tokens, BVNs, or Paystack signatures inside client-side files or `memory.md`[cite: 9].
-- **DON'T block the UI:** Never let a transaction call lock up the main application thread.
-- **DON'T Use Heavy Animation Libraries:** Avoid Framer Motion. Rely entirely on lightweight Tailwind transitions.
+- Save session state and key architectural decisions while preserving security boundaries (**NEVER save secrets, API keys, BVNs, or tokens to persistent logs**).

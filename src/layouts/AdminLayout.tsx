@@ -265,6 +265,20 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             </div>
           </div>
         </header>
+        {/* Administrator Mode Warning Banner */}
+        {import.meta.env.VITE_USE_MOCK !== 'true' && (
+          <div className="bg-amber-500/10 border-b border-amber-500/30 px-4 py-2.5 sm:px-6 lg:px-8 text-amber-700 text-xs font-semibold flex items-center justify-between gap-2 select-none">
+            <div className="flex items-center gap-2">
+              <span className="shrink-0 text-base">⚠️</span>
+              <span>
+                <strong>Production Guardrail Active:</strong> Live Administrator mutation endpoints are protected. Unverified manual wallet debit/credit and pricing overrides are disabled in production API mode.
+              </span>
+            </div>
+            <span className="bg-amber-200 text-amber-900 text-[10px] uppercase font-bold px-2 py-0.5 rounded shrink-0">
+              Live Mode Active
+            </span>
+          </div>
+        )}
 
         {/* Admin Pages Workspace */}
         <main className="flex-grow p-4 sm:p-6 lg:p-8">

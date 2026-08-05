@@ -39,13 +39,10 @@ export function SignupPage() {
         email: email.trim(),
       })
 
-      // 2. Generate and "send" the pass
-      const pass = await sendPass(phone.trim())
+      // 2. Dispatch pass via server-side Edge Function
+      const res = await sendPass(phone.trim(), email.trim())
       
-      // DEV HELPER: Log the pass for testing
-      console.log(`[DEV] Your pass is: ${pass}`)
-      
-      showToast('Pass sent to your phone!', 'success')
+      showToast(res.message || 'Pass sent to your phone and email!', 'success')
       
       // 3. Navigate to verification screen
       navigate('/auth/verify-pass')
@@ -58,7 +55,7 @@ export function SignupPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-12">
       <div className="text-center">
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Create an Account</h1>
         <p className="mt-2 text-slate-500 text-sm">

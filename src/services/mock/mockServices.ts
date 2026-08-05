@@ -44,6 +44,7 @@ import {
 } from './mockData'
 
 import { generateAlphanumericPass } from './mockPassGenerator'
+import { toMSISDN } from '../../utils/detectNetwork'
 
 // ─── Configuration ────────────────────────────────────────
 
@@ -122,8 +123,16 @@ function txnRef(serviceCode: string): string {
  * Returns the created User (without wallet — wallet is created in `mockCreatePin`).
  */
 export async function mockSignup(data: SignupRequest): Promise<User> {
+  // Sanitize phone to MSISDN format (23480XXXXXXXX)
+  let msisdnPhone: string
+  try {
+    msisdnPhone = toMSISDN(data.phone)
+  } catch {
+    return delayedError('Invalid phone number format.')
+  }
+
   // Check for duplicate phone or email
-  const existingPhone = db.users.find((u) => u.phone === data.phone)
+  const existingPhone = db.users.find((u) => u.phone === msisdnPhone)
   if (existingPhone) {
     return delayedError('An account with this phone number already exists.')
   }
@@ -135,7 +144,7 @@ export async function mockSignup(data: SignupRequest): Promise<User> {
   const newUser: User = {
     id: uid('usr'),
     email: data.email,
-    phone: data.phone,
+    phone: msisdnPhone,
     firstName: data.firstName,
     lastName: data.lastName,
     pinHash: '',          // Will be set in mockCreatePin
@@ -153,14 +162,14 @@ export async function mockSignup(data: SignupRequest): Promise<User> {
  * In production: BulkSMSNigeria delivers "Your CEKPay Pass is A7X9TP".
  * For mock: returns the pass directly so the dev can see it in console/UI.
  */
-export async function mockSendPass(phone: string): Promise<{ pass: string }> {
+export async function mockSendPass(phone: string): Promise<{ success: boolean; message: string }> {
   const pass = generateAlphanumericPass()
   db.pendingPasses.set(phone, pass)
 
   // Log for dev convenience
   console.info(`[CEKPay Mock] Pass for ${phone}: ${pass}`)
 
-  return delayed({ pass })
+  return delayed({ success: true, message: 'Pass dispatched successfully.' })
 }
 
 /**
@@ -188,7 +197,7 @@ export async function mockCreatePin(userId: string, pin: string): Promise<Wallet
   const user = db.users.find((u) => u.id === userId)
   if (!user) return delayedError('User not found.')
 
-  if (pin.length !== 4 || !/^\\d{4}$/.test(pin)) {
+  if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
     return delayedError('PIN must be exactly 4 digits.')
   }
 
@@ -237,7 +246,7 @@ export async function mockCreateDVA(
   }
 
   wallet.paystackCustomerCode = `CUS_mock_${Math.random().toString(36).slice(2, 8)}`
-  wallet.accountNumber = user.phone.replace(/^0/, '') // 10-digit
+  wallet.accountNumber = user.phone.slice(3) // MSISDN '2348012345678' → '8012345678' (10-digit DVA)
   wallet.bankName = 'Wema Bank'
   wallet.localWithdrawalBank = localBankName
   wallet.localWithdrawalAccount = localAccountNumber
@@ -309,7 +318,15 @@ export async function mockVerifyPin(userId: string, pin: string): Promise<boolea
  * Returns the User object if successful.
  */
 export async function mockLogin(phone: string, pin: string): Promise<User> {
-  const user = db.users.find((u) => u.phone === phone)
+  // Normalize input to MSISDN for comparison against stored format
+  let lookupPhone: string
+  try {
+    lookupPhone = toMSISDN(phone)
+  } catch {
+    return delayedError('Invalid phone number or PIN.')
+  }
+
+  const user = db.users.find((u) => u.phone === lookupPhone)
   if (!user) {
     return delayedError('Invalid phone number or PIN.')
   }
@@ -407,7 +424,7 @@ async function processTransaction(
     service,
     amount,
     status,
-    aggregatorUsed: Math.random() > 0.5 ? 'Toppa' : 'VTpass',
+    aggregatorUsed: Math.random() > 0.5 ? 'Toppa' : 'CheapDataHub',
     createdAt: new Date().toISOString(),
     ...extra,
   }
@@ -564,13 +581,13 @@ export async function mockAdminToggleAggregator(
   value: string,
 ): Promise<void> {
   const validSettings = ['primaryDataApi', 'secondaryDataApi', 'primaryBillsApi'] as const
-  const validValues = ['Toppa', 'VTpass'] as const
+  const validValues = ['Toppa', 'CheapDataHub'] as const
 
   if (!validSettings.includes(setting as typeof validSettings[number])) {
     return delayedError(`Invalid setting: ${setting}`)
   }
   if (!validValues.includes(value as typeof validValues[number])) {
-    return delayedError(`Invalid aggregator: ${value}. Must be 'Toppa' or 'VTpass'.`)
+    return delayedError(`Invalid aggregator: ${value}. Must be 'Toppa' or 'CheapDataHub'.`)
   }
 
   const key = setting as keyof Pick<AdminSettings, 'primaryDataApi' | 'secondaryDataApi' | 'primaryBillsApi'>

@@ -16,7 +16,7 @@ import React, { useEffect, useState } from 'react'
 import { useAuthStore } from '../stores/authStore'
 import { useWalletStore } from '../stores/walletStore'
 import { useSmartContactsStore } from '../stores/smartContactsStore'
-import { mockGetDashboard } from '../services/mock/mockServices'
+import { getDashboard as mockGetDashboard } from '../services'
 import type { Announcement } from '../types'
 
 // Composed dashboard components (stubbed for compile-safety, fully implemented in 6.2+)
@@ -132,7 +132,9 @@ export const DashboardPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-20 relative">
       {/* Announcement Banner */}
-      <AnnouncementBanner announcements={announcements} />
+      <div className="max-h-14 overflow-hidden rounded-xl">
+        <AnnouncementBanner announcements={announcements} />
+      </div>
 
       {/* Offline Alert Strip */}
       <OfflineBanner />

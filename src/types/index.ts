@@ -1,15 +1,15 @@
 export type UserRole = 'admin' | 'user'
 export type TransactionStatus = 'Success' | 'Failed' | 'Reversed'
-export type TransactionService = 'Airtime' | 'Data' | 'Electricity' | 'Cable' | 'Funding'
+export type TransactionService = 'Airtime' | 'Data' | 'Electricity' | 'Cable' | 'Funding' | 'Withdrawal'
 export type TransactionType = 'Credit' | 'Debit'
-export type Aggregator = 'Toppa' | 'VTpass'
+export type Aggregator = 'Toppa' | 'CheapDataHub'
 export type PaymentProcessor = 'Paystack'
 export type AnnouncementType = 'Info' | 'Warning' | 'Promo'
 
 export interface User {
   id: string              // UUID
   email: string
-  phone: string
+  phone: string           // MSISDN format: 23480XXXXXXXX (13 digits, no leading 0 or +)
   firstName: string
   lastName: string
   pinHash: string         // Hashed 4-digit PIN

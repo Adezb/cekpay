@@ -3,7 +3,7 @@ import { Modal } from '../ui/Modal'
 import { PinInput } from '../ui/PinInput'
 import { useUIStore } from '../../stores/uiStore'
 import { useTransaction } from '../../hooks/useTransaction'
-import { mockPayElectricity } from '../../services/mock/mockServices'
+import { payElectricity as mockPayElectricity } from '../../services'
 import type { ElectricityRequest } from '../../types'
 import { formatNaira } from '../../utils/formatCurrency'
 

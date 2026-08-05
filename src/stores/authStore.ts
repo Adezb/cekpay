@@ -1,31 +1,22 @@
 /**
- * CEKPay Auth Store — Phase 4.4
+ * CEKPay Auth Store — Phase 2B-2
  *
  * Zustand store managing authentication state, persistent sessions,
- * and the App Lock screen. Persisted to localStorage so auth survives
- * page refreshes and app restarts.
- *
- * Persistence behavior:
- *   - First signup completion (after PIN creation): isAuthenticated=true, isLocked=false
- *   - App close/refresh (session exists in persist): isAuthenticated=true, isLocked=true
- *   - Inactivity timeout (5 min): isLocked=true
- *   - Successful PIN on lock screen: isLocked=false
- *   - Logout: clear all, isAuthenticated=false, isLocked=false
- *
- * @see Phase 4.4 in implementation_plan.md
+ * Supabase Auth listener, and the App Lock screen.
  */
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { User, SignupRequest } from '../types'
+import { supabase } from '../lib/supabase'
 import {
-  mockSignup,
-  mockSendPass,
-  mockVerifyPass,
-  mockCreatePin,
-  mockVerifyPin,
-  mockLogin,
-} from '../services/mock/mockServices'
+  signup as serviceSignup,
+  sendPass as serviceSendPass,
+  verifyPass as serviceVerifyPass,
+  createPin as serviceCreatePin,
+  verifyPin as serviceVerifyPin,
+  login as serviceLogin,
+} from '../services'
 
 // ─── State Shape ──────────────────────────────────────────
 
@@ -35,11 +26,11 @@ interface AuthState {
   phone: string | null         // Persisted across auth flow steps
   isAuthenticated: boolean
   isLocked: boolean            // App Lock state
-  isAdmin: boolean             // Hardcoded toggle for Phase 1 testing
+  isAdmin: boolean             // Admin toggle / role check
 
   // ── Auth Flow Actions ──
   signup: (data: SignupRequest) => Promise<void>
-  sendPass: (phone: string) => Promise<string>
+  sendPass: (phone: string, email?: string) => Promise<{ success: boolean; message: string }>
   verifyPass: (pass: string) => Promise<boolean>
   createPin: (pin: string) => Promise<void>
   login: (phone: string, pin: string) => Promise<void>
@@ -49,9 +40,9 @@ interface AuthState {
   lockApp: () => void
 
   // ── Session Actions ──
-  logout: () => void
-  toggleAdminRole: () => void  // DEV ONLY: flip isAdmin for testing
-  updateUser: (updates: Partial<User>) => void // Update local user fields
+  logout: () => Promise<void>
+  toggleAdminRole: () => void
+  updateUser: (updates: Partial<User>) => void
 }
 
 // ─── Initial State ────────────────────────────────────────
@@ -81,18 +72,21 @@ export const useAuthStore = create<AuthState>()(
        * Stores phone for subsequent pass/PIN steps.
        */
       signup: async (data: SignupRequest) => {
-        const user = await mockSignup(data)
+        const user = await serviceSignup(data)
         set({ user, phone: data.phone })
       },
 
       /**
-       * Step 2: Generate and "send" a 6-char alphanumeric Pass.
-       * Returns the pass for dev visibility (logged to console by mockSendPass).
+       * Step 2: Generate and send a 6-char alphanumeric Pass.
+       * Passes phone and email to delivery engine.
        */
-      sendPass: async (phone: string) => {
+      sendPass: async (phone: string, email?: string) => {
+        const targetEmail = email || get().user?.email
+        if (!targetEmail || targetEmail.trim() === '') {
+          throw new Error('Email address is required for Pass delivery.')
+        }
         set({ phone })
-        const { pass } = await mockSendPass(phone)
-        return pass
+        return await serviceSendPass(phone, targetEmail)
       },
 
       /**
@@ -101,21 +95,20 @@ export const useAuthStore = create<AuthState>()(
       verifyPass: async (pass: string) => {
         const { phone } = get()
         if (!phone) throw new Error('No phone number in auth state. Please start over.')
-        return await mockVerifyPass(phone, pass)
+        return await serviceVerifyPass(phone, pass)
       },
 
       /**
-       * Step 4: Create 4-digit PIN and provision wallet.
+       * Step 4: Create 4-digit PIN (bcrypt hashed server-side) and provision wallet.
        * Completes the signup flow — sets isAuthenticated=true, isLocked=false.
        */
       createPin: async (pin: string) => {
         const { user } = get()
         if (!user) throw new Error('No user in auth state. Please start over.')
 
-        await mockCreatePin(user.id, pin)
+        await serviceCreatePin(user.id, pin)
 
-        // Update user with PIN hash set
-        const updatedUser: User = { ...user, pinHash: pin }
+        const updatedUser: User = { ...user, pinHash: '' }
 
         set({
           user: updatedUser,
@@ -124,16 +117,15 @@ export const useAuthStore = create<AuthState>()(
           isAdmin: updatedUser.role === 'admin',
         })
 
-        // Dispatch event for legacy hooks still listening
         _dispatchAuthChange()
       },
 
       /**
-       * Login an existing user with phone and PIN.
+       * Login an existing user with phone and 4-digit PIN.
        */
       login: async (phone: string, pin: string) => {
-        const user = await mockLogin(phone, pin)
-        
+        const user = await serviceLogin(phone, pin)
+
         set({
           user,
           phone,
@@ -141,7 +133,7 @@ export const useAuthStore = create<AuthState>()(
           isLocked: false,
           isAdmin: user.role === 'admin',
         })
-        
+
         _dispatchAuthChange()
       },
 
@@ -150,14 +142,13 @@ export const useAuthStore = create<AuthState>()(
       // ══════════════════════════════════════════════
 
       /**
-       * Verify PIN on the lock screen.
-       * Returns true if unlock succeeded, false otherwise.
+       * Verify PIN on the lock screen via server-side bcrypt compare.
        */
       unlockWithPin: async (pin: string) => {
         const { user } = get()
         if (!user) return false
 
-        const isValid = await mockVerifyPin(user.id, pin)
+        const isValid = await serviceVerifyPin(user.id, pin)
         if (isValid) {
           set({ isLocked: false })
           _dispatchAuthChange()
@@ -181,21 +172,27 @@ export const useAuthStore = create<AuthState>()(
       // ══════════════════════════════════════════════
 
       /**
-       * Logout: clear all state and redirect to signup.
+       * Logout: clear Supabase session and local state.
        */
-      logout: () => {
+      logout: async () => {
+        try {
+          if (import.meta.env.VITE_USE_MOCK !== 'true') {
+            await supabase.auth.signOut()
+          }
+        } catch (err) {
+          console.error('Supabase signout error:', err)
+        }
         set({ ...INITIAL_STATE })
         _dispatchAuthChange()
       },
 
       /**
-       * DEV ONLY: Toggle admin role for testing.
+       * Toggle admin role for testing.
        */
       toggleAdminRole: () => {
         const { isAdmin, user } = get()
         const newIsAdmin = !isAdmin
 
-        // Also update the user's role field for consistency
         if (user) {
           set({
             isAdmin: newIsAdmin,
@@ -209,7 +206,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       /**
-       * Update local user fields
+       * Update local user fields.
        */
       updateUser: (updates: Partial<User>) => {
         const { user } = get()
@@ -220,11 +217,10 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: 'cekpay-auth',   // localStorage key
+      name: 'cekpay-auth',
 
       /**
-       * On rehydration: if the user was authenticated, force isLocked=true.
-       * This ensures returning users always see the PIN lock screen.
+       * On rehydration: if authenticated, force isLocked=true (App Lock shield).
        */
       onRehydrateStorage: () => {
         return (state) => {
@@ -235,9 +231,6 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      /**
-       * Only persist data fields — actions are re-created by Zustand.
-       */
       partialize: (state) => ({
         user: state.user,
         phone: state.phone,
@@ -249,28 +242,64 @@ export const useAuthStore = create<AuthState>()(
   ),
 )
 
+// ─── Supabase Session Hydration Listener ───────────────────
+
+if (import.meta.env.VITE_USE_MOCK !== 'true') {
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .maybeSingle()
+
+      if (error) {
+        console.warn('Profiles query error during auth state change:', error.message)
+        return
+      }
+
+      if (profile && profile.id === session.user.id) {
+        const user: User = {
+          id: profile.id,
+          email: profile.email,
+          phone: profile.phone,
+          firstName: profile.first_name,
+          lastName: profile.last_name,
+          pinHash: '',
+          role: profile.role as 'user' | 'admin',
+          isBanned: profile.is_banned,
+        }
+
+        useAuthStore.setState({
+          user,
+          phone: profile.phone,
+          isAuthenticated: true,
+          isAdmin: user.role === 'admin',
+        })
+        _dispatchAuthChange()
+      } else {
+        useAuthStore.setState({ ...INITIAL_STATE })
+        _dispatchAuthChange()
+      }
+    } else if (event === 'SIGNED_OUT') {
+      useAuthStore.setState({ ...INITIAL_STATE })
+      _dispatchAuthChange()
+    }
+  })
+}
+
 // ─── Legacy Event Bridge ──────────────────────────────────
 
-/**
- * Dispatches a custom event so that legacy hooks (useAuthGuard, useInactivityTimer)
- * that still listen on `cekpay_auth_change` can react to state changes.
- *
- * This also syncs the old `cekpay_mock_auth` localStorage key used by the
- * Dev Toolbar and legacy hooks, ensuring backward compatibility until
- * those consumers are fully migrated to the Zustand store.
- */
 function _dispatchAuthChange() {
   const state = useAuthStore.getState()
 
-  // Sync legacy localStorage format
   const legacyAuth = {
     isAuthenticated: state.isAuthenticated,
     isLocked: state.isLocked,
     role: state.user?.role ?? (state.isAdmin ? 'admin' : 'user'),
-    firstName: state.user?.firstName ?? 'Demo',
+    firstName: state.user?.firstName ?? 'User',
   }
   localStorage.setItem('cekpay_mock_auth', JSON.stringify(legacyAuth))
 
-  // Fire the custom event
   window.dispatchEvent(new Event('cekpay_auth_change'))
 }

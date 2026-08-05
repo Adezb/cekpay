@@ -36,7 +36,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-12">
       <div className="text-center">
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Welcome Back</h1>
         <p className="mt-2 text-slate-500 text-sm">
@@ -102,14 +102,14 @@ export function LoginPage() {
         <div className="flex justify-center gap-3">
           <button 
             type="button" 
-            onClick={() => { setPhone('08012345678'); setPin('1234') }}
+            onClick={() => { setPhone('2348012345678'); setPin('1234') }}
             className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 py-1.5 px-3 rounded-full transition-colors font-medium"
           >
             Load User Demo
           </button>
           <button 
             type="button" 
-            onClick={() => { setPhone('08099999999'); setPin('0000') }}
+            onClick={() => { setPhone('2348099999999'); setPin('0000') }}
             className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 py-1.5 px-3 rounded-full transition-colors font-medium"
           >
             Load Admin Demo

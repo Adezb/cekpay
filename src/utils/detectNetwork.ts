@@ -85,13 +85,13 @@ const PREFIX_TO_CARRIER: Record<string, string> = {
   '0908': '9mobile', '0909': '9mobile',
 }
 
-// ─── Detection Functions ──────────────────────────────────
+// ─── Normalization & MSISDN Functions ─────────────────────
 
 /**
- * Normalize a Nigerian phone number to the `0XXX...` format.
+ * Normalize a Nigerian phone number to the local `0XXX...` format.
  * Handles:
  *   - International: +234XXXXXXXXXX → 0XXXXXXXXXX
- *   - No-plus:        234XXXXXXXXXX → 0XXXXXXXXXX
+ *   - MSISDN:         234XXXXXXXXXX → 0XXXXXXXXXX
  *   - Local:          0XXXXXXXXXX   → 0XXXXXXXXXX
  *   - Spaces/dashes:  080-1234-5678 → 08012345678
  */
@@ -105,6 +105,39 @@ function normalizePhone(phone: string): string {
   }
 
   return cleaned
+}
+
+/**
+ * Convert any Nigerian phone number format to MSISDN (23480XXXXXXXX).
+ * This is the canonical storage format for the `profiles.phone` column
+ * and the format required by BulkSMSNigeria & Paystack APIs.
+ *
+ * @param phone - Any format: 08012345678, +2348012345678, 234XXXXXXXXXX
+ * @returns 13-digit MSISDN string (e.g., '2348012345678')
+ * @throws Error if the input is not a valid Nigerian mobile number
+ *
+ * @example
+ * toMSISDN('08012345678')     // → '2348012345678'
+ * toMSISDN('+2348012345678')  // → '2348012345678'
+ * toMSISDN('2348012345678')   // → '2348012345678'
+ */
+export function toMSISDN(phone: string): string {
+  const local = normalizePhone(phone)
+  if (!/^0[7-9][0-1]\d{8}$/.test(local)) {
+    throw new Error('Invalid Nigerian phone number format.')
+  }
+  return '234' + local.slice(1)
+}
+
+/**
+ * Convert any Nigerian phone number format to local display format (0XXXXXXXXXX).
+ * Useful for rendering phone numbers in the UI.
+ *
+ * @param phone - Any format: 2348012345678, +2348012345678, 08012345678
+ * @returns 11-digit local string (e.g., '08012345678')
+ */
+export function toLocalPhone(phone: string): string {
+  return normalizePhone(phone)
 }
 
 /**
@@ -140,7 +173,8 @@ export function detectNetwork(phone: string): string {
 
 /**
  * Check if a phone number looks like a valid Nigerian mobile number.
- * Must be 11 digits starting with 0, or 13/14 digits with +234/234 prefix.
+ * Accepts any format: local (0XXXXXXXXXX), MSISDN (234XXXXXXXXXX), or +234.
+ * Validates against the NCC prefix ranges (07X, 08X, 09X).
  */
 export function isValidNigerianPhone(phone: string): boolean {
   const normalized = normalizePhone(phone)

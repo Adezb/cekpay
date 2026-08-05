@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import {
-  mockAdminGetUsers,
-  mockAdminFundWallet,
-  mockAdminDebitWallet,
-  mockAdminBanUser,
-  mockAdminUnbanUser,
-  mockAdminResetPin,
-  mockAdminGetUserLedger,
+  adminGetUsers as mockAdminGetUsers,
+  adminFundWallet as mockAdminFundWallet,
+  adminDebitWallet as mockAdminDebitWallet,
+  adminBanUser as mockAdminBanUser,
+  adminUnbanUser as mockAdminUnbanUser,
+  adminResetPin as mockAdminResetPin,
+  adminGetUserLedger as mockAdminGetUserLedger,
   type AdminUserView
-} from '../../services/mock/mockServices'
+} from '../../services'
 import type { Transaction, Wallet } from '../../types'
 import { formatNaira } from '../../utils/formatCurrency'
 import { Modal } from '../../components/ui/Modal'

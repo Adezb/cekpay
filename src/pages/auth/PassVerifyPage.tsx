@@ -75,10 +75,9 @@ export function PassVerifyPage() {
 
     try {
       setIsSubmitting(true)
-      const newPass = await sendPass(phone)
-      console.log(`[DEV] Your new pass is: ${newPass}`)
+      const res = await sendPass(phone)
       
-      showToast('A new Pass has been sent', 'success')
+      showToast(res.message || 'A new Pass has been sent', 'success')
       setCountdown(60) // Reset timer
       setPass('') // Clear input
     } catch (err) {

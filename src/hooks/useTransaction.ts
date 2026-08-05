@@ -3,7 +3,7 @@ import { useAuthStore } from '../stores/authStore'
 import { useWalletStore } from '../stores/walletStore'
 import { useTransactionStore } from '../stores/transactionStore'
 import { useUIStore } from '../stores/uiStore'
-import { mockVerifyPin } from '../services/mock/mockServices'
+import { verifyPin as mockVerifyPin } from '../services'
 import type { Transaction } from '../types'
 
 interface UseTransactionReturn<TArgs> {

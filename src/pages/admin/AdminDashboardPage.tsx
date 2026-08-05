@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { mockAdminGetDashboard } from '../../services/mock/mockServices'
+import { adminGetDashboard as mockAdminGetDashboard } from '../../services'
 import { formatNaira } from '../../utils/formatCurrency'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { Spinner } from '../../components/ui/Spinner'

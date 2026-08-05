@@ -77,6 +77,17 @@ const ProtectedRoutes: React.FC = () => {
   return <Outlet />
 }
 
+// Gate 3: Admin Role Guard (Must have role === 'admin')
+const AdminRoutes: React.FC = () => {
+  const user = useAuthStore((state) => state.user)
+
+  if (!user || user.role !== 'admin') {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  return <Outlet />
+}
+
 // Public-only Routes (Only accessible when Unauthenticated)
 const PublicRoutes: React.FC = () => {
   const auth = useAuthGuard()
@@ -216,8 +227,10 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* DEV ONLY ROUTES */}
-        <Route path="/dev" element={<DevPlayground />} />
+        {/* DEV ONLY ROUTES (excluded from production builds) */}
+        {import.meta.env.DEV && (
+          <Route path="/dev" element={<DevPlayground />} />
+        )}
 
         {/* PUBLIC AUTH ROUTES (Gate 1 Public Guard) */}
         <Route element={<PublicRoutes />}>
@@ -244,14 +257,16 @@ function App() {
             <Route path="profile" element={<ProfilePage />} />
           </Route>
 
-          {/* Administrator Protected Routes */}
-          <Route path="/admin" element={<AdminLayout><Outlet /></AdminLayout>}>
-            <Route index element={<AdminDashboardPage />} />
-            <Route path="users" element={<AdminUsersPage />} />
-            <Route path="pricing" element={<AdminPricingPage />} />
-            <Route path="announcements" element={<AdminAnnouncementsPage />} />
-            <Route path="settings" element={<AdminSettingsPage />} />
-            <Route path="promos" element={<AdminPromosPage />} />
+          {/* Administrator Protected Routes (Gate 3: Admin Role Guard) */}
+          <Route element={<AdminRoutes />}>
+            <Route path="/admin" element={<AdminLayout><Outlet /></AdminLayout>}>
+              <Route index element={<AdminDashboardPage />} />
+              <Route path="users" element={<AdminUsersPage />} />
+              <Route path="pricing" element={<AdminPricingPage />} />
+              <Route path="announcements" element={<AdminAnnouncementsPage />} />
+              <Route path="settings" element={<AdminSettingsPage />} />
+              <Route path="promos" element={<AdminPromosPage />} />
+            </Route>
           </Route>
         </Route>
 

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import {
-  mockAdminGetSettings,
-  mockAdminToggleMaintenance
-} from '../../services/mock/mockServices'
+  adminGetSettings as mockAdminGetSettings,
+  adminToggleMaintenance as mockAdminToggleMaintenance
+} from '../../services'
 import type { AdminSettings } from '../../types'
 import { Spinner } from '../../components/ui/Spinner'
 import { useUIStore } from '../../stores/uiStore'
@@ -15,8 +15,6 @@ export const AdminSettingsPage: React.FC = () => {
 
   // Local state for UI toggles (since the mock only really fully supports maintenance mode)
   const [requirePin, setRequirePin] = useState(true)
-  const [primaryDataProvider, setPrimaryDataProvider] = useState('provider_a')
-  const [primaryAirtimeProvider, setPrimaryAirtimeProvider] = useState('provider_a')
 
   const fetchSettings = () => {
     setIsLoading(true)
@@ -47,10 +45,6 @@ export const AdminSettingsPage: React.FC = () => {
     }
   }
 
-  const handleSaveSimulated = (e: React.FormEvent) => {
-    e.preventDefault()
-    showToast('Settings saved successfully', 'success')
-  }
 
   if (isLoading || !settings) {
     return (
@@ -65,7 +59,7 @@ export const AdminSettingsPage: React.FC = () => {
     <div className="space-y-8 max-w-4xl mx-auto pb-20">
       <div>
         <h2 className="text-2xl font-black tracking-tight text-text-primary">System Settings</h2>
-        <p className="text-sm text-text-muted mt-1">Configure global application behaviors and failovers.</p>
+        <p className="text-sm text-text-muted mt-1">Configure global application behaviors.</p>
       </div>
 
       <div className="space-y-6">
@@ -115,53 +109,6 @@ export const AdminSettingsPage: React.FC = () => {
               </label>
             </div>
           </div>
-        </section>
-
-        {/* API Failover Switchboard */}
-        <section className="bg-surface border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
-            <h3 className="font-bold text-lg text-text-primary">API Failover Switchboard</h3>
-          </div>
-          <form onSubmit={handleSaveSimulated} className="p-6 space-y-6">
-            <div className="space-y-2">
-              <label className="block font-bold text-text-primary">Primary Data Provider</label>
-              <p className="text-sm text-text-muted">Select which aggregator processes data transactions.</p>
-              <select
-                value={primaryDataProvider}
-                onChange={(e) => setPrimaryDataProvider(e.target.value)}
-                className="w-full sm:max-w-md bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand mt-2"
-              >
-                <option value="provider_a">VTPass (Primary)</option>
-                <option value="provider_b">Shago (Secondary)</option>
-                <option value="provider_c">Clubkonnect (Backup)</option>
-              </select>
-            </div>
-
-            <div className="h-px bg-slate-100"></div>
-
-            <div className="space-y-2">
-              <label className="block font-bold text-text-primary">Primary Airtime Provider</label>
-              <p className="text-sm text-text-muted">Select which aggregator processes airtime transactions.</p>
-              <select
-                value={primaryAirtimeProvider}
-                onChange={(e) => setPrimaryAirtimeProvider(e.target.value)}
-                className="w-full sm:max-w-md bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand mt-2"
-              >
-                <option value="provider_a">VTPass (Primary)</option>
-                <option value="provider_b">ReloadNG (Secondary)</option>
-                <option value="provider_c">Shago (Backup)</option>
-              </select>
-            </div>
-
-            <div className="pt-4">
-              <button
-                type="submit"
-                className="bg-brand text-white font-bold py-3 px-8 rounded-xl hover:bg-blue-800 transition-colors w-full sm:w-auto"
-              >
-                Save Switchboard Configurations
-              </button>
-            </div>
-          </form>
         </section>
       </div>
     </div>

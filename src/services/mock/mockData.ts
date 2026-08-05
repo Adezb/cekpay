@@ -36,7 +36,7 @@ export const MOCK_USERS: User[] = [
   {
     id: 'usr_demo_001',
     email: 'demo@cekpay.com',
-    phone: '08012345678',
+    phone: '2348012345678',
     firstName: 'Tunde',
     lastName: 'Adebayo',
     pinHash: '1234',            // plaintext for mock — hashed in production
@@ -46,7 +46,7 @@ export const MOCK_USERS: User[] = [
   {
     id: 'usr_admin_001',
     email: 'admin@cekpay.com',
-    phone: '08099999999',
+    phone: '2348099999999',
     firstName: 'Admin',
     lastName: 'CEKPay',
     pinHash: '0000',
@@ -66,7 +66,7 @@ export const MOCK_WALLETS: Wallet[] = [
     userId: 'usr_demo_001',
     balance: 5000,
     paystackCustomerCode: 'CUS_mock_abc123',
-    accountNumber: '8012345678',
+    accountNumber: '8012345678',  // DVA derived from MSISDN (last 10 digits)
     bankName: 'Wema Bank',
   },
   {
@@ -74,7 +74,7 @@ export const MOCK_WALLETS: Wallet[] = [
     userId: 'usr_admin_001',
     balance: 250_000,
     paystackCustomerCode: 'CUS_mock_admin_001',
-    accountNumber: '8099999999',
+    accountNumber: '8099999999',  // DVA derived from MSISDN (last 10 digits)
     bankName: 'Wema Bank',
   },
 ]
@@ -104,7 +104,7 @@ export const MOCK_TRANSACTIONS: Transaction[] = [
     service: 'Airtime',
     amount: 200,
     status: 'Failed',
-    aggregatorUsed: 'VTpass',
+    aggregatorUsed: 'CheapDataHub',
     createdAt: ts(1, 9, 45),
     recipient: '08098765432',
     provider: 'Airtel',
@@ -133,7 +133,7 @@ export const MOCK_TRANSACTIONS: Transaction[] = [
     service: 'Data',
     amount: 300,
     status: 'Reversed',
-    aggregatorUsed: 'VTpass',
+    aggregatorUsed: 'CheapDataHub',
     createdAt: ts(4, 16, 0),
     recipient: '07033344455',
     provider: 'Glo',
@@ -149,7 +149,7 @@ export const MOCK_TRANSACTIONS: Transaction[] = [
     service: 'Electricity',
     amount: 5000,
     status: 'Success',
-    aggregatorUsed: 'VTpass',
+    aggregatorUsed: 'CheapDataHub',
     createdAt: ts(3, 8, 15),
     recipient: '45678901234',
     provider: 'IKEDC',
@@ -177,7 +177,7 @@ export const MOCK_TRANSACTIONS: Transaction[] = [
     service: 'Cable',
     amount: 21000,
     status: 'Success',
-    aggregatorUsed: 'VTpass',
+    aggregatorUsed: 'CheapDataHub',
     createdAt: ts(5, 7, 0),
     recipient: '1234567890',
     provider: 'DSTV',
@@ -244,7 +244,7 @@ export const MOCK_TRANSACTIONS: Transaction[] = [
     service: 'Data',
     amount: 5000,
     status: 'Success',
-    aggregatorUsed: 'VTpass',
+    aggregatorUsed: 'CheapDataHub',
     createdAt: ts(10, 13, 10),
     recipient: '08012345678',
     provider: 'MTN',
@@ -434,8 +434,8 @@ export const MOCK_ANNOUNCEMENTS: Announcement[] = [
 
 export const MOCK_ADMIN_SETTINGS: AdminSettings = {
   primaryDataApi: 'Toppa',
-  secondaryDataApi: 'VTpass',
-  primaryBillsApi: 'VTpass',
+  secondaryDataApi: 'CheapDataHub',
+  primaryBillsApi: 'CheapDataHub',
   maintenanceMode: false,
 }
 

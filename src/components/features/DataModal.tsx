@@ -3,7 +3,7 @@ import { Modal } from '../ui/Modal'
 import { PinInput } from '../ui/PinInput'
 import { useUIStore } from '../../stores/uiStore'
 import { useTransaction } from '../../hooks/useTransaction'
-import { mockBuyData, mockGetProductPrices } from '../../services/mock/mockServices'
+import { buyData as mockBuyData, getProductPrices as mockGetProductPrices } from '../../services'
 import { detectNetwork } from '../../utils/networkDetect'
 import type { DataRequest, ProductPrice } from '../../types'
 import { formatNaira } from '../../utils/formatCurrency'
@@ -130,7 +130,7 @@ export const DataModal: React.FC = () => {
                     <span className={`text-xs font-bold px-2 py-1 rounded-md uppercase tracking-wide
                       ${network === 'MTN' ? 'bg-yellow-100 text-yellow-800' : ''}
                       ${network === 'Airtel' ? 'bg-red-100 text-red-800' : ''}
-                      ${network === 'GLO' ? 'bg-green-100 text-green-800' : ''}
+                      ${network === 'Glo' ? 'bg-green-100 text-green-800' : ''}
                       ${network === '9mobile' ? 'bg-emerald-100 text-emerald-800' : ''}
                       ${network === 'Unknown' ? 'bg-slate-200 text-slate-600' : ''}
                     `}>

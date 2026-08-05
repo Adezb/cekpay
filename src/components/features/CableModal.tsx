@@ -3,11 +3,11 @@ import { Modal } from '../ui/Modal'
 import { PinInput } from '../ui/PinInput'
 import { useUIStore } from '../../stores/uiStore'
 import { useTransaction } from '../../hooks/useTransaction'
-import { mockPayCable, mockGetProductPrices } from '../../services/mock/mockServices'
+import { payCable as mockPayCable, getProductPrices as mockGetProductPrices } from '../../services'
 import type { CableRequest, ProductPrice } from '../../types'
 import { formatNaira } from '../../utils/formatCurrency'
 
-const PROVIDERS = ['DSTV', 'GOTV', 'Startimes', 'Showmax']
+const PROVIDERS = ['DSTV', 'GOtv', 'Startimes']
 
 export const CableModal: React.FC = () => {
   const { isModalOpen, closeModal, showToast } = useUIStore()

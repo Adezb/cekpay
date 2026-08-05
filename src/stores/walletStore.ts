@@ -1,22 +1,17 @@
 /**
- * CEKPay Wallet Store — Phase 4.5
+ * CEKPay Wallet Store — Phase 2B-3
  *
- * Zustand store managing the user's wallet state. Provides:
- *   - `fetchWallet()` — loads wallet from the mock dashboard service
- *   - `debit(amount)` — locally decrements the balance (after a successful transaction)
- *   - `credit(amount)` — locally increments the balance (after a wallet funding)
- *
- * The wallet is NOT persisted to localStorage — it is fetched fresh on each
- * dashboard load via `mockGetDashboard`. This keeps the store lightweight
- * and avoids stale balance data after a page refresh.
- *
- * @see Phase 4.5 in implementation_plan.md
+ * Zustand store managing the user's wallet state. Supports:
+ *   - Fetching wallet via service switchboard
+ *   - Local debit/credit balance sync
+ *   - Real-time PostgreSQL subscription to `public.wallets` table
  */
 
 import { create } from 'zustand'
 import type { Wallet } from '../types'
-import { mockGetDashboard } from '../services/mock/mockServices'
+import { getDashboard } from '../services'
 import { useAuthStore } from './authStore'
+import { supabase } from '../lib/supabase'
 
 // ─── State Shape ──────────────────────────────────────────
 
@@ -30,6 +25,7 @@ interface WalletState {
   fetchWallet: () => Promise<void>
   debit: (amount: number) => void
   credit: (amount: number) => void
+  setBalance: (newBalance: number) => void
   reset: () => void
 }
 
@@ -42,8 +38,7 @@ export const useWalletStore = create<WalletState>()((set, get) => ({
   error: null,
 
   /**
-   * Fetch the wallet from the mock dashboard service.
-   * Reads the current userId from the auth store.
+   * Fetch the wallet from the service layer.
    */
   fetchWallet: async () => {
     const user = useAuthStore.getState().user
@@ -55,7 +50,7 @@ export const useWalletStore = create<WalletState>()((set, get) => ({
     set({ isLoading: true, error: null })
 
     try {
-      const data = await mockGetDashboard(user.id)
+      const data = await getDashboard(user.id)
       set({ wallet: data.wallet, isLoading: false, error: null })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch wallet'
@@ -65,10 +60,10 @@ export const useWalletStore = create<WalletState>()((set, get) => ({
 
   /**
    * Locally debit the wallet balance after a successful transaction.
-   * Does NOT call the mock service — the service already debited the
-   * in-memory DB. This just keeps the Zustand state in sync.
+   * Skipped in live mode as PostgreSQL Realtime payload is authoritative.
    */
   debit: (amount: number) => {
+    if (import.meta.env.VITE_USE_MOCK !== 'true') return
     const { wallet } = get()
     if (!wallet) return
 
@@ -81,9 +76,11 @@ export const useWalletStore = create<WalletState>()((set, get) => ({
   },
 
   /**
-   * Locally credit the wallet balance after a successful funding.
+   * Locally credit the wallet balance.
+   * Skipped in live mode as PostgreSQL Realtime payload is authoritative.
    */
   credit: (amount: number) => {
+    if (import.meta.env.VITE_USE_MOCK !== 'true') return
     const { wallet } = get()
     if (!wallet) return
 
@@ -96,9 +93,50 @@ export const useWalletStore = create<WalletState>()((set, get) => ({
   },
 
   /**
-   * Reset wallet state (called on logout).
+   * Authoritatively set the wallet balance.
+   */
+  setBalance: (newBalance: number) => {
+    const { wallet } = get()
+    if (!wallet) return
+
+    set({
+      wallet: {
+        ...wallet,
+        balance: newBalance,
+      },
+    })
+  },
+
+  /**
+   * Reset wallet state.
    */
   reset: () => {
     set({ wallet: null, isLoading: false, error: null })
   },
 }))
+
+// ─── Real-Time PostgreSQL Wallet Subscription ──────────────
+
+if (import.meta.env.VITE_USE_MOCK !== 'true') {
+  supabase
+    .channel('public:wallets')
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'wallets' },
+      (payload) => {
+        const currentWallet = useWalletStore.getState().wallet
+        if (currentWallet && payload.new && payload.new.user_id === currentWallet.userId) {
+          useWalletStore.setState({
+            wallet: {
+              ...currentWallet,
+              balance: Number(payload.new.balance),
+              accountNumber: payload.new.dva_account_number || currentWallet.accountNumber,
+              bankName: payload.new.dva_bank_name || currentWallet.bankName,
+              paystackCustomerCode: payload.new.paystack_customer_code || currentWallet.paystackCustomerCode,
+            },
+          })
+        }
+      }
+    )
+    .subscribe()
+}

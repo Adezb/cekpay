@@ -4,7 +4,7 @@ import { useWalletStore } from '../stores/walletStore'
 import { useUIStore } from '../stores/uiStore'
 import { Modal } from '../components/ui/Modal'
 import { Spinner } from '../components/ui/Spinner'
-import { mockUpdateUserEmail } from '../services/mock/mockServices'
+import { updateUserEmail as mockUpdateUserEmail } from '../services'
 
 export const ProfilePage: React.FC = () => {
   const { user, logout, toggleAdminRole, updateUser } = useAuthStore()
@@ -189,15 +189,18 @@ export const ProfilePage: React.FC = () => {
           </button>
 
           <button 
-            className="w-full bg-red-50 p-4 rounded-2xl shadow-sm border border-red-100 flex items-center justify-between active:scale-95 transition-transform"
+            className="w-full bg-red-600 hover:bg-red-700 text-white p-4 rounded-2xl shadow-md border border-red-700 flex items-center justify-between active:scale-95 transition-transform font-bold"
             onClick={handleLogout}
           >
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-red-100 text-error rounded-full flex items-center justify-center">
+              <div className="w-10 h-10 bg-red-700/50 text-white rounded-full flex items-center justify-center text-lg">
                 🚪
               </div>
-              <span className="font-semibold text-error">Log Out</span>
+              <span className="font-bold text-white text-base">Log Out</span>
             </div>
+            <svg className="w-5 h-5 text-white/80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1m0-10V5" />
+            </svg>
           </button>
         </section>
 

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import {
-  mockAdminGetPromos,
-  mockAdminCreatePromo,
-  mockAdminTogglePromo
-} from '../../services/mock/mockServices'
+  adminGetPromos as mockAdminGetPromos,
+  adminCreatePromo as mockAdminCreatePromo,
+  adminTogglePromo as mockAdminTogglePromo
+} from '../../services'
 import type { Promo } from '../../types'
 import { formatNaira } from '../../utils/formatCurrency'
 import { Modal } from '../../components/ui/Modal'

@@ -6,7 +6,7 @@ import { PinInput } from '../ui/PinInput'
 import { useUIStore } from '../../stores/uiStore'
 import { useAuthStore } from '../../stores/authStore'
 import { useWalletStore } from '../../stores/walletStore'
-import { mockProcessWithdrawal } from '../../services/mock/mockServices'
+import { processWithdrawal as mockProcessWithdrawal } from '../../services'
 
 export const WithdrawModal: React.FC = () => {
   const { isModalOpen, closeModal, showToast } = useUIStore()

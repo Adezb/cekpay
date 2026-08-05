@@ -21,12 +21,12 @@ export default defineConfig({
         orientation: 'portrait',
         icons: [
           {
-            src: 'pwa-192x192.svg',
+            src: 'CEKPay-192x192.svg',
             sizes: '192x192',
             type: 'image/svg+xml'
           },
           {
-            src: 'pwa-512x512.svg',
+            src: 'CEKPay-512x512.svg',
             sizes: '512x512',
             type: 'image/svg+xml',
             purpose: 'any maskable'
@@ -35,7 +35,17 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        globIgnores: ['**/OneSignalSDKWorker.js'],
+        navigateFallbackDenylist: [/^\/OneSignalSDKWorker\.js$/, /^\/functions\/v1\//, /^https:\/\/.*\.supabase\.co/],
         runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/functions\/v1\//i,
+            handler: 'NetworkOnly',
+          },
+          {
+            urlPattern: /^https:\/\/onesignal\.com\//i,
+            handler: 'NetworkOnly',
+          },
           {
             urlPattern: /^https:\/\/api\./i,
             handler: 'NetworkFirst',

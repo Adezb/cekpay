@@ -5,7 +5,7 @@ import { Input } from '../ui/Input'
 import { useUIStore } from '../../stores/uiStore'
 import { useAuthStore } from '../../stores/authStore'
 import { useWalletStore } from '../../stores/walletStore'
-import { mockResolveBankAccount, mockCreateDVA } from '../../services/mock/mockServices'
+import { resolveBankAccount as mockResolveBankAccount, createDVA as mockCreateDVA } from '../../services'
 
 const TOP_BANKS = [
   'Access Bank',

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import {
-  mockAdminGetAnnouncements,
-  mockAdminCreateAnnouncement,
-  mockAdminToggleAnnouncement
-} from '../../services/mock/mockServices'
+  adminGetAnnouncements as mockAdminGetAnnouncements,
+  adminCreateAnnouncement as mockAdminCreateAnnouncement,
+  adminToggleAnnouncement as mockAdminToggleAnnouncement
+} from '../../services'
 import type { Announcement, AnnouncementType } from '../../types'
 import { Modal } from '../../components/ui/Modal'
 import { Spinner } from '../../components/ui/Spinner'

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { mockAdminGetProductPrices, mockAdminUpdatePricing } from '../../services/mock/mockServices'
+import { adminGetProductPrices as mockAdminGetProductPrices, adminUpdatePricing as mockAdminUpdatePricing } from '../../services'
 import type { ProductPrice } from '../../types'
 import { formatNaira } from '../../utils/formatCurrency'
 import { Spinner } from '../../components/ui/Spinner'

@@ -31,27 +31,8 @@ import { toMSISDN } from '../../utils/detectNetwork'
 export async function apiSignup(data: SignupRequest): Promise<User> {
   const msisdn = toMSISDN(data.phone)
 
-  const { data: existingPhone } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('phone', msisdn)
-    .maybeSingle()
-
-  if (existingPhone) {
-    throw new Error('An account with this phone number already exists.')
-  }
-
-  const { data: existingEmail } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('email', data.email)
-    .maybeSingle()
-
-  if (existingEmail) {
-    throw new Error('An account with this email address already exists.')
-  }
-
-  const secureRandomPassword = `${crypto.randomUUID()}-${crypto.randomUUID()}`
+  // Generate 64-character secure random password (strictly <= 72 chars for bcrypt limit)
+  const secureRandomPassword = (crypto.randomUUID() + crypto.randomUUID()).slice(0, 64)
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email: data.email,
     password: secureRandomPassword,

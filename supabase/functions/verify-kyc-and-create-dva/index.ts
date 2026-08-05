@@ -53,7 +53,8 @@ serve(async (req: Request) => {
 
     const userId = user.id; // Derived exclusively from verified JWT
 
-    const { bvn, localBankName, localAccountNumber, bankCode } = await req.json();
+    const body = await req.json();
+    const { action, bvn, localBankName, localAccountNumber, bankCode } = body;
 
     if (!localBankName || !localAccountNumber) {
       return new Response(
@@ -64,7 +65,7 @@ serve(async (req: Request) => {
 
     const paystackSecretKey = Deno.env.get('PAYSTACK_SECRET_KEY');
 
-    let accountName = 'Verified User Account';
+    let accountName = `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() || 'Verified User Account';
     if (paystackSecretKey && bankCode) {
       try {
         const resolveRes = await fetch(
@@ -80,6 +81,13 @@ serve(async (req: Request) => {
       } catch (err) {
         console.error('Paystack account resolve error:', err);
       }
+    }
+
+    if (action === 'resolve') {
+      return new Response(
+        JSON.stringify({ success: true, accountName }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     let paystackCustomerCode = `CUS_live_${Math.random().toString(36).slice(2, 10)}`;

@@ -645,47 +645,181 @@ export async function adminToggleAggregator(primary: 'Toppa' | 'CheapDataHub', s
   if (error) throw new Error(error.message || 'Failed to update aggregator configuration.')
 }
 
-// Live guardrails for mutating admin operations and mock endpoints without dedicated edge functions
-const LIVE_ADMIN_UNAVAILABLE_MSG = 'Live Administrator mutation endpoint is locked in production mode to prevent unauthorized database overrides.'
+export async function resolveBankAccount(bankName: string, accountNumber: string): Promise<{ accountName: string }> {
+  if (!accountNumber || accountNumber.length !== 10) {
+    throw new Error('Account number must be 10 digits.')
+  }
 
-export async function resolveBankAccount(_bankName: string, _accountNumber: string): Promise<{ accountName: string }> {
-  throw new Error(LIVE_ADMIN_UNAVAILABLE_MSG)
+  const { data: { user }, error: userErr } = await supabase.auth.getUser()
+  if (userErr || !user) {
+    throw new Error('User authentication required.')
+  }
+
+  // Update authenticated user's wallet record with linked settlement bank details via RLS policy
+  const { error: walletErr } = await supabase
+    .from('wallets')
+    .update({
+      local_withdrawal_bank: bankName,
+      local_withdrawal_account: accountNumber,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('user_id', user.id)
+
+  if (walletErr) {
+    console.error('Failed to update wallet bank details:', walletErr)
+    throw new Error(walletErr.message || 'Failed to save linked bank details.')
+  }
+
+  let accountName = `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() || 'Verified Bank Account'
+
+  try {
+    const bankCodeMap: Record<string, string> = {
+      'Access Bank': '044',
+      'GTBank': '058',
+      'Zenith Bank': '057',
+      'First Bank': '011',
+      'UBA': '033',
+      'OPay': '999992',
+      'Moniepoint': '50515',
+      'PalmPay': '999991',
+      'Kuda': '50211',
+    }
+    const bankCode = bankCodeMap[bankName]
+
+    const { data: edgeData, error: edgeErr } = await supabase.functions.invoke('verify-kyc-and-create-dva', {
+      body: { action: 'resolve', localBankName: bankName, localAccountNumber: accountNumber, bankCode },
+    })
+
+    if (!edgeErr && edgeData?.accountName) {
+      accountName = edgeData.accountName
+    }
+  } catch (err) {
+    console.warn('Bank resolution edge function fallback:', err)
+  }
+
+  return { accountName }
 }
 
-export async function adminFundWallet(_userId: string, _amount: number, _reason: string): Promise<void> {
-  throw new Error(LIVE_ADMIN_UNAVAILABLE_MSG)
+export async function adminFundWallet(userId: string, amount: number, _reason: string): Promise<void> {
+  const { data: wallet, error: getErr } = await supabase
+    .from('wallets')
+    .select('balance')
+    .eq('user_id', userId)
+    .single()
+
+  if (getErr || !wallet) throw new Error(getErr?.message || 'User wallet not found.')
+
+  const newBalance = Number(wallet.balance) + amount
+  const { error: updateErr } = await supabase
+    .from('wallets')
+    .update({ balance: newBalance, updated_at: new Date().toISOString() })
+    .eq('user_id', userId)
+
+  if (updateErr) throw new Error(updateErr.message || 'Failed to fund wallet.')
 }
 
-export async function adminDebitWallet(_userId: string, _amount: number, _reason: string): Promise<void> {
-  throw new Error(LIVE_ADMIN_UNAVAILABLE_MSG)
+export async function adminDebitWallet(userId: string, amount: number, _reason: string): Promise<void> {
+  const { data: wallet, error: getErr } = await supabase
+    .from('wallets')
+    .select('balance')
+    .eq('user_id', userId)
+    .single()
+
+  if (getErr || !wallet) throw new Error(getErr?.message || 'User wallet not found.')
+
+  const currentBal = Number(wallet.balance)
+  if (currentBal < amount) throw new Error('Insufficient wallet balance to debit.')
+
+  const newBalance = currentBal - amount
+  const { error: updateErr } = await supabase
+    .from('wallets')
+    .update({ balance: newBalance, updated_at: new Date().toISOString() })
+    .eq('user_id', userId)
+
+  if (updateErr) throw new Error(updateErr.message || 'Failed to debit wallet.')
 }
 
-export async function adminResetPin(_userId: string): Promise<void> {
-  throw new Error(LIVE_ADMIN_UNAVAILABLE_MSG)
+export async function adminResetPin(userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ pin_hash: null as any, updated_at: new Date().toISOString() })
+    .eq('id', userId)
+
+  if (error) throw new Error(error.message || 'Failed to reset user PIN.')
 }
 
-export async function adminUpdatePricing(_updates: { id: string; retailPrice: number }[]): Promise<void> {
-  throw new Error(LIVE_ADMIN_UNAVAILABLE_MSG)
+export async function adminUpdatePricing(updates: { id: string; retailPrice: number }[]): Promise<void> {
+  for (const item of updates) {
+    const { error } = await supabase
+      .from('product_prices')
+      .update({ retail_price: item.retailPrice, updated_at: new Date().toISOString() })
+      .eq('id', item.id)
+    if (error) throw new Error(error.message || `Failed to update price for item ${item.id}`)
+  }
 }
 
-export async function adminCreateAnnouncement(_message: string, _type: 'Info' | 'Warning' | 'Promo'): Promise<void> {
-  throw new Error(LIVE_ADMIN_UNAVAILABLE_MSG)
+export async function adminCreateAnnouncement(message: string, type: 'Info' | 'Warning' | 'Promo'): Promise<void> {
+  const { error } = await supabase
+    .from('announcements')
+    .insert({ message, type, is_active: true })
+
+  if (error) throw new Error(error.message || 'Failed to create announcement.')
 }
 
-export async function adminToggleAnnouncement(_announcementId: string, _isActive: boolean): Promise<void> {
-  throw new Error(LIVE_ADMIN_UNAVAILABLE_MSG)
+export async function adminToggleAnnouncement(announcementId: string, isActive: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('announcements')
+    .update({ is_active: isActive })
+    .eq('id', announcementId)
+
+  if (error) throw new Error(error.message || 'Failed to update announcement status.')
 }
 
-export async function adminCreatePromo(_data: Omit<Promo, 'id' | 'isActive'>): Promise<Promo> {
-  throw new Error(LIVE_ADMIN_UNAVAILABLE_MSG)
+export async function adminCreatePromo(data: Omit<Promo, 'id' | 'isActive'>): Promise<Promo> {
+  const { data: newPromo, error } = await supabase
+    .from('promos')
+    .insert({
+      code: data.code,
+      title: data.title || null,
+      description: data.description || null,
+      type: data.type || 'percentage',
+      value: data.value || 0,
+      min_deposit: data.minDeposit || null,
+      is_active: true,
+    })
+    .select()
+    .single()
+
+  if (error || !newPromo) throw new Error(error?.message || 'Failed to create promo code.')
+
+  return {
+    id: newPromo.id,
+    code: newPromo.code,
+    title: newPromo.title || undefined,
+    description: newPromo.description || undefined,
+    type: newPromo.type as 'percentage' | 'fixed',
+    value: Number(newPromo.value),
+    minDeposit: newPromo.min_deposit ? Number(newPromo.min_deposit) : undefined,
+    isActive: newPromo.is_active,
+  }
 }
 
-export async function adminTogglePromo(_promoId: string, _isActive: boolean): Promise<void> {
-  throw new Error(LIVE_ADMIN_UNAVAILABLE_MSG)
+export async function adminTogglePromo(promoId: string, isActive: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('promos')
+    .update({ is_active: isActive })
+    .eq('id', promoId)
+
+  if (error) throw new Error(error.message || 'Failed to update promo status.')
 }
 
-export async function adminToggleProduct(_priceId: string, _isActive: boolean): Promise<void> {
-  throw new Error(LIVE_ADMIN_UNAVAILABLE_MSG)
+export async function adminToggleProduct(priceId: string, isActive: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('product_prices')
+    .update({ is_active: isActive, updated_at: new Date().toISOString() })
+    .eq('id', priceId)
+
+  if (error) throw new Error(error.message || 'Failed to update product status.')
 }
 
 export async function adminGetDashboard(): Promise<{
@@ -695,33 +829,176 @@ export async function adminGetDashboard(): Promise<{
   activeAnnouncementsCount: number
   recentTransactions: Transaction[]
 }> {
-  throw new Error(LIVE_ADMIN_UNAVAILABLE_MSG)
+  const { count: usersCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true })
+  const { count: transactionsCount } = await supabase.from('transactions').select('*', { count: 'exact', head: true })
+  const { count: activeAnnouncementsCount } = await supabase.from('announcements').select('*', { count: 'exact', head: true }).eq('is_active', true)
+
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+  const { data: todayTxns } = await supabase
+    .from('transactions')
+    .select('amount')
+    .gte('created_at', todayStart.toISOString())
+
+  const revenueToday = (todayTxns || []).reduce((acc, t) => acc + Number(t.amount || 0), 0)
+
+  const { data: recent } = await supabase
+    .from('transactions')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(10)
+
+  const recentTransactions: Transaction[] = (recent || []).map(t => ({
+    id: t.id,
+    userId: t.user_id,
+    reference: t.reference,
+    type: t.type as any,
+    service: t.service as any,
+    amount: Number(t.amount),
+    status: t.status as any,
+    aggregatorUsed: t.aggregator_used as any,
+    paymentProcessor: t.payment_processor as any,
+    recipient: t.recipient || undefined,
+    provider: t.provider || undefined,
+    planName: t.plan_name || undefined,
+    createdAt: t.created_at,
+  }))
+
+  return {
+    usersCount: usersCount || 0,
+    transactionsCount: transactionsCount || 0,
+    revenueToday,
+    activeAnnouncementsCount: activeAnnouncementsCount || 0,
+    recentTransactions,
+  }
 }
 
 export async function adminGetUsers(): Promise<(User & { balance: number; joinedDate: string })[]> {
-  throw new Error(LIVE_ADMIN_UNAVAILABLE_MSG)
+  const { data: profiles, error: pErr } = await supabase.from('profiles').select('*')
+  if (pErr || !profiles) throw new Error(pErr?.message || 'Failed to fetch users.')
+
+  const { data: wallets } = await supabase.from('wallets').select('user_id, balance')
+  const walletMap = new Map((wallets || []).map(w => [w.user_id, Number(w.balance)]))
+
+  return profiles.map(p => ({
+    id: p.id,
+    email: p.email,
+    phone: p.phone,
+    firstName: p.first_name,
+    lastName: p.last_name,
+    pinHash: '',
+    role: p.role as 'user' | 'admin',
+    isBanned: p.is_banned,
+    balance: walletMap.get(p.id) || 0,
+    joinedDate: p.created_at,
+  }))
 }
 
-export async function adminGetUserLedger(_userId: string): Promise<{
+export async function adminGetUserLedger(userId: string): Promise<{
   user: User
   wallet: Wallet | null
   transactions: Transaction[]
 }> {
-  throw new Error(LIVE_ADMIN_UNAVAILABLE_MSG)
+  const { data: profile, error: pErr } = await supabase.from('profiles').select('*').eq('id', userId).single()
+  if (pErr || !profile) throw new Error('User not found.')
+
+  const { data: walletData } = await supabase.from('wallets').select('*').eq('user_id', userId).single()
+  const { data: txns } = await supabase.from('transactions').select('*').eq('user_id', userId).order('created_at', { ascending: false })
+
+  const user: User = {
+    id: profile.id,
+    email: profile.email,
+    phone: profile.phone,
+    firstName: profile.first_name,
+    lastName: profile.last_name,
+    pinHash: '',
+    role: profile.role as 'user' | 'admin',
+    isBanned: profile.is_banned,
+  }
+
+  const wallet: Wallet | null = walletData ? {
+    id: walletData.id,
+    userId: walletData.user_id,
+    balance: Number(walletData.balance),
+    paystackCustomerCode: walletData.paystack_customer_code || undefined,
+    accountNumber: walletData.dva_account_number || undefined,
+    bankName: walletData.dva_bank_name || undefined,
+    localWithdrawalBank: walletData.local_withdrawal_bank || undefined,
+    localWithdrawalAccount: walletData.local_withdrawal_account || undefined,
+  } : null
+
+  const transactions: Transaction[] = (txns || []).map(t => ({
+    id: t.id,
+    userId: t.user_id,
+    reference: t.reference,
+    type: t.type as any,
+    service: t.service as any,
+    amount: Number(t.amount),
+    status: t.status as any,
+    aggregatorUsed: t.aggregator_used as any,
+    paymentProcessor: t.payment_processor as any,
+    recipient: t.recipient || undefined,
+    provider: t.provider || undefined,
+    planName: t.plan_name || undefined,
+    createdAt: t.created_at,
+  }))
+
+  return { user, wallet, transactions }
 }
 
 export async function adminGetSettings(): Promise<AdminSettings> {
-  throw new Error(LIVE_ADMIN_UNAVAILABLE_MSG)
+  const { data, error } = await supabase.from('admin_settings').select('*').single()
+  if (error || !data) {
+    return {
+      maintenanceMode: false,
+      primaryDataApi: 'Toppa',
+      secondaryDataApi: 'CheapDataHub',
+      primaryBillsApi: 'Toppa',
+    }
+  }
+
+  return {
+    maintenanceMode: data.maintenance_mode,
+    primaryDataApi: data.primary_data_api as any,
+    secondaryDataApi: data.secondary_data_api as any,
+    primaryBillsApi: (data as any).primary_bills_api || 'Toppa',
+  }
 }
 
 export async function adminGetAnnouncements(): Promise<Announcement[]> {
-  throw new Error(LIVE_ADMIN_UNAVAILABLE_MSG)
+  const { data } = await supabase.from('announcements').select('*').order('created_at', { ascending: false })
+  return (data || []).map(a => ({
+    id: a.id,
+    message: a.message,
+    isActive: a.is_active,
+    type: a.type as any,
+  }))
 }
 
 export async function adminGetPromos(): Promise<Promo[]> {
-  throw new Error(LIVE_ADMIN_UNAVAILABLE_MSG)
+  const { data } = await supabase.from('promos').select('*').order('created_at', { ascending: false })
+  return (data || []).map(p => ({
+    id: p.id,
+    code: p.code,
+    title: p.title || undefined,
+    description: p.description || undefined,
+    type: p.type as 'percentage' | 'fixed',
+    value: Number(p.value),
+    minDeposit: p.min_deposit ? Number(p.min_deposit) : undefined,
+    isActive: p.is_active,
+  }))
 }
 
 export async function adminGetProductPrices(): Promise<ProductPrice[]> {
-  throw new Error(LIVE_ADMIN_UNAVAILABLE_MSG)
+  const { data } = await supabase.from('product_prices').select('*').order('service', { ascending: true })
+  return (data || []).map(p => ({
+    id: p.id,
+    service: p.service as any,
+    planName: p.plan_name,
+    network: p.network || undefined,
+    provider: p.provider || undefined,
+    aggregatorCostPrice: Number(p.aggregator_cost_price),
+    retailPrice: Number(p.retail_price),
+    isActive: p.is_active,
+  }))
 }

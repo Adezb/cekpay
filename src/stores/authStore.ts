@@ -27,6 +27,8 @@ interface AuthState {
   isAuthenticated: boolean
   isLocked: boolean            // App Lock state
   isAdmin: boolean             // Admin toggle / role check
+  isPassVerified: boolean     // OTP pass verification status
+  hasPin: boolean             // 4-digit PIN setup status
 
   // ── Auth Flow Actions ──
   signup: (data: SignupRequest) => Promise<void>
@@ -53,6 +55,8 @@ const INITIAL_STATE = {
   isAuthenticated: false,
   isLocked: false,
   isAdmin: false,
+  isPassVerified: false,
+  hasPin: false,
 }
 
 // ─── Store ────────────────────────────────────────────────
@@ -73,7 +77,7 @@ export const useAuthStore = create<AuthState>()(
        */
       signup: async (data: SignupRequest) => {
         const user = await serviceSignup(data)
-        set({ user, phone: data.phone })
+        set({ user, phone: data.phone, isPassVerified: false, hasPin: false })
       },
 
       /**
@@ -95,7 +99,12 @@ export const useAuthStore = create<AuthState>()(
       verifyPass: async (pass: string) => {
         const { phone } = get()
         if (!phone) throw new Error('No phone number in auth state. Please start over.')
-        return await serviceVerifyPass(phone, pass)
+        const isValid = await serviceVerifyPass(phone, pass)
+        if (isValid) {
+          set({ isPassVerified: true })
+          _dispatchAuthChange()
+        }
+        return isValid
       },
 
       /**
@@ -115,6 +124,8 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: true,
           isLocked: false,
           isAdmin: updatedUser.role === 'admin',
+          isPassVerified: true,
+          hasPin: true,
         })
 
         _dispatchAuthChange()
@@ -132,6 +143,8 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: true,
           isLocked: false,
           isAdmin: user.role === 'admin',
+          isPassVerified: true,
+          hasPin: true,
         })
 
         _dispatchAuthChange()
@@ -237,6 +250,8 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: state.isAuthenticated,
         isLocked: state.isLocked,
         isAdmin: state.isAdmin,
+        isPassVerified: state.isPassVerified,
+        hasPin: state.hasPin,
       }),
     },
   ),
@@ -247,39 +262,55 @@ export const useAuthStore = create<AuthState>()(
 if (import.meta.env.VITE_USE_MOCK !== 'true') {
   supabase.auth.onAuthStateChange(async (event, session) => {
     if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .maybeSingle()
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .maybeSingle()
 
-      if (error) {
-        console.warn('Profiles query error during auth state change:', error.message)
-        return
-      }
-
-      if (profile && profile.id === session.user.id) {
-        const user: User = {
-          id: profile.id,
-          email: profile.email,
-          phone: profile.phone,
-          firstName: profile.first_name,
-          lastName: profile.last_name,
-          pinHash: '',
-          role: profile.role as 'user' | 'admin',
-          isBanned: profile.is_banned,
+        if (error) {
+          console.warn('Profiles query error during auth state change:', error.message)
+          // On 403 / SQLSTATE 42501 / RLS permission errors during unverified sign-up,
+          // do NOT reset store to INITIAL_STATE so phone and user are preserved.
+          return
         }
 
-        useAuthStore.setState({
-          user,
-          phone: profile.phone,
-          isAuthenticated: true,
-          isAdmin: user.role === 'admin',
-        })
-        _dispatchAuthChange()
-      } else {
-        useAuthStore.setState({ ...INITIAL_STATE })
-        _dispatchAuthChange()
+        if (profile && profile.id === session.user.id) {
+          const hasPin = Boolean(profile.pin_hash && profile.pin_hash.trim() !== '')
+          const user: User = {
+            id: profile.id,
+            email: profile.email,
+            phone: profile.phone,
+            firstName: profile.first_name,
+            lastName: profile.last_name,
+            pinHash: profile.pin_hash || '',
+            role: profile.role as 'user' | 'admin',
+            isBanned: profile.is_banned,
+          }
+
+          useAuthStore.setState({
+            user,
+            phone: profile.phone,
+            isAuthenticated: hasPin,
+            isAdmin: user.role === 'admin',
+            hasPin,
+          })
+          _dispatchAuthChange()
+        } else {
+          // If profile does not exist or cannot be fetched, check if an unverified signup flow is active
+          const currentState = useAuthStore.getState()
+          if (!currentState.isAuthenticated && currentState.phone) {
+            // Preserve unverified signup state (phone & user) for OTP / PIN screens
+            return
+          }
+
+          useAuthStore.setState({ ...INITIAL_STATE })
+          _dispatchAuthChange()
+        }
+      } catch (err) {
+        console.warn('Unhandled exception fetching profile during auth state change:', err)
+        return
       }
     } else if (event === 'SIGNED_OUT') {
       useAuthStore.setState({ ...INITIAL_STATE })
@@ -294,10 +325,12 @@ function _dispatchAuthChange() {
   const state = useAuthStore.getState()
 
   const legacyAuth = {
-    isAuthenticated: state.isAuthenticated,
+    isAuthenticated: state.isAuthenticated && state.hasPin,
     isLocked: state.isLocked,
     role: state.user?.role ?? (state.isAdmin ? 'admin' : 'user'),
     firstName: state.user?.firstName ?? 'User',
+    hasPin: state.hasPin,
+    isPassVerified: state.isPassVerified,
   }
   localStorage.setItem('cekpay_mock_auth', JSON.stringify(legacyAuth))
 

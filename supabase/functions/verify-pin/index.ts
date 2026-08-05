@@ -7,7 +7,7 @@ declare const Deno: {
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { compare } from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
+import bcrypt from "https://esm.sh/bcryptjs@2.4.3";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -144,8 +144,8 @@ serve(async (req: Request) => {
       }
     }
 
-    // Verify PIN using server-side bcrypt
-    const isValid = await compare(pin, profile.pin_hash);
+    // Verify PIN using server-side bcryptjs
+    const isValid = await bcrypt.compare(pin, profile.pin_hash);
 
     if (!isValid) {
       const currentAttempts = (lockRecord && new Date(lockRecord.expires_at).getTime() >= Date.now())

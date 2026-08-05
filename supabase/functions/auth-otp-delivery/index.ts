@@ -14,7 +14,7 @@ const corsHeaders = {
 };
 
 // Cryptographically Secure PRNG Pass Generation using Web Crypto API
-function generateAlphanumericPass(length = 6): string {
+export function generateAlphanumericPass(length = 6): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   const array = new Uint8Array(length);
   crypto.getRandomValues(array);
@@ -26,7 +26,7 @@ function generateAlphanumericPass(length = 6): string {
 }
 
 // Server-Side Pass Code Hashing via SHA-256
-async function hashPass(code: string): Promise<string> {
+export async function hashPass(code: string): Promise<string> {
   const normalized = code.trim().toUpperCase();
   const buffer = new TextEncoder().encode(normalized);
   const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
@@ -34,7 +34,7 @@ async function hashPass(code: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function normalizePhone(phone: any): string {
+export function normalizePhone(phone: any): string {
   if (!phone) return '';
   let cleaned = String(phone).replace(/[\s\-()]/g, '');
   if (!cleaned || !/^\+?\d{7,15}$/.test(cleaned)) return '';
@@ -81,7 +81,17 @@ serve(async (req: Request) => {
       );
     }
 
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+      global: {
+        headers: {
+          Authorization: `Bearer ${serviceRoleKey}`,
+        },
+      },
+    });
 
     // ── Action 1: Verify Server-Side OTP ─────────────────────────
     if (action === 'verify') {
@@ -205,33 +215,50 @@ serve(async (req: Request) => {
     if (dbErr) {
       console.error('Failed to save OTP to database:', dbErr);
       return new Response(
-        JSON.stringify({ error: dbErr.message || 'Failed to generate verification Pass. Please try again.' }),
+        JSON.stringify({ success: false, error: dbErr.message || 'Failed to generate verification Pass. Please try again.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Dispatch SMS via BulkSMSNigeria
+    // Strictly Dispatch SMS via BulkSMSNigeria
     const bulkSmsKey = Deno.env.get('BULKSMSNIGERIA_API_KEY');
     let smsStatus = 'skipped';
     if (bulkSmsKey) {
       try {
-        const smsRes = await fetch('https://www.bulksmsnigeria.com/api/v2/sms/send', {
+        const smsRes = await fetch('https://www.bulksmsnigeria.com/api/v2/sms', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Authorization': `Bearer ${bulkSmsKey}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
           body: JSON.stringify({
-            api_token: bulkSmsKey,
             from: 'CEKPay',
             to: msisdn,
             body: `Your CEKPay Pass is ${passCode}`,
             dnd: 2,
           }),
         });
-        const smsData = await smsRes.json();
-        smsStatus = smsData.data?.status === 'success' ? 'delivered' : 'queued';
+
+        const smsDataText = await smsRes.text();
+        let smsDataJson: any = {};
+        try {
+          smsDataJson = JSON.parse(smsDataText);
+        } catch (_) {}
+
+        if (!smsRes.ok || (smsDataJson.data && smsDataJson.data.status !== 'success') || smsDataText.toLowerCase().includes('error')) {
+          console.error('BulkSMSNigeria Delivery Failed:', smsDataText);
+          smsStatus = 'failed';
+        } else {
+          console.log('BulkSMSNigeria Success:', smsDataText);
+          smsStatus = 'delivered';
+        }
       } catch (smsErr) {
         console.error('BulkSMSNigeria dispatch error:', smsErr);
         smsStatus = 'failed';
       }
+    } else {
+      console.warn('BULKSMSNIGERIA_API_KEY is missing in environment variables.');
     }
 
     // Dispatch Email via Resend
@@ -277,8 +304,9 @@ serve(async (req: Request) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
+    console.error('auth-otp-delivery unhandled error:', error);
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal Server Error' }),
+      JSON.stringify({ success: false, error: error.message || 'Internal Server Error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

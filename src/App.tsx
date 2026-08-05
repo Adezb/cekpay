@@ -26,6 +26,8 @@ export interface MockAuthData {
   isLocked: boolean
   role: 'admin' | 'user'
   firstName: string
+  hasPin?: boolean
+  isPassVerified?: boolean
 }
 
 export const getMockAuth = (): MockAuthData => {
@@ -34,6 +36,8 @@ export const getMockAuth = (): MockAuthData => {
     isLocked: false,
     role: 'admin',
     firstName: 'Demo',
+    hasPin: false,
+    isPassVerified: false,
   }
   try {
     const val = localStorage.getItem('cekpay_mock_auth')
@@ -62,11 +66,19 @@ export const useMockAuth = () => {
 // Route Guards / Gates
 // ==========================================
 
-// Gate 1 & 2: Protected Routes (Must be Authenticated and Unlocked)
+// Gate 1 & 2: Protected Routes (Must be Authenticated, PIN set, and Unlocked)
 const ProtectedRoutes: React.FC = () => {
   const auth = useAuthGuard()
 
   if (!auth.isAuthenticated) {
+    if (auth.phone) {
+      if (!auth.isPassVerified) {
+        return <Navigate to="/auth/verify-pass" replace />
+      }
+      if (!auth.hasPin) {
+        return <Navigate to="/auth/create-pin" replace />
+      }
+    }
     return <Navigate to="/auth/signup" replace />
   }
 
@@ -184,10 +196,10 @@ const DevToolbar: React.FC = () => {
             type="checkbox"
             checked={auth.isAuthenticated}
             onChange={(e) => {
-              setMockAuth({ ...auth, isAuthenticated: e.target.checked })
+              setMockAuth({ ...auth, isAuthenticated: e.target.checked, hasPin: e.target.checked, isPassVerified: e.target.checked })
               if (e.target.checked && !useAuthStore.getState().user) {
                 // Populate mock user if we are bypassing auth to avoid infinite skeleton loading
-                useAuthStore.setState({ user: DEMO_USER, phone: DEMO_USER.phone })
+                useAuthStore.setState({ user: DEMO_USER, phone: DEMO_USER.phone, isAuthenticated: true, hasPin: true, isPassVerified: true })
               }
             }}
             className="w-4 h-4 rounded text-brand focus:ring-brand accent-brand cursor-pointer"

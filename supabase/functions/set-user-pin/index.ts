@@ -7,7 +7,7 @@ declare const Deno: {
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { hash } from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
+import bcrypt from "https://esm.sh/bcryptjs@2.4.3";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -54,7 +54,16 @@ serve(async (req: Request) => {
 
     const userId = user.id; // Derived exclusively from verified JWT
 
-    const { pin } = await req.json();
+    let body: any;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON request payload.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const pin = body?.pin;
 
     if (!pin) {
       return new Response(
@@ -72,8 +81,8 @@ serve(async (req: Request) => {
 
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
-    // Hash PIN using bcrypt
-    const pinHash = await hash(pin);
+    // Hash PIN using bcryptjs
+    const pinHash = await bcrypt.hash(pin, 10);
 
     // Update profile.pin_hash in DB
     const { error: updateError } = await supabaseAdmin

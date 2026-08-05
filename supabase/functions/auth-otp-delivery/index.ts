@@ -34,14 +34,17 @@ async function hashPass(code: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function normalizePhone(phone: string): string {
-  let cleaned = phone.replace(/[\s\-()]/g, '');
-  if (cleaned.startsWith('+234')) {
-    cleaned = '234' + cleaned.slice(4);
-  } else if (cleaned.startsWith('0') && cleaned.length === 11) {
+function normalizePhone(phone: any): string {
+  if (!phone) return '';
+  let cleaned = String(phone).replace(/[\s\-()]/g, '');
+  if (!cleaned || !/^\+?\d{7,15}$/.test(cleaned)) return '';
+  if (cleaned.startsWith('0')) {
     cleaned = '234' + cleaned.slice(1);
   }
-  return cleaned;
+  if (!cleaned.startsWith('+') && !cleaned.startsWith('234')) {
+    cleaned = '234' + cleaned;
+  }
+  return cleaned.replace('+', '');
 }
 
 serve(async (req: Request) => {
@@ -62,6 +65,12 @@ serve(async (req: Request) => {
     }
 
     const msisdn = normalizePhone(phone);
+    if (!msisdn) {
+      return new Response(
+        JSON.stringify({ error: 'Valid phone number is required.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
@@ -160,12 +169,6 @@ serve(async (req: Request) => {
     }
 
     // ── Action 2: Dispatch Server-Side OTP ───────────────────────
-    if (!email) {
-      return new Response(
-        JSON.stringify({ error: 'Email address is required for dispatch.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     // ── Rate Limiting / Cooldown Guard (60s Cooldown per Phone) ───
     const { data: existingOtp } = await supabaseAdmin
@@ -234,7 +237,7 @@ serve(async (req: Request) => {
     // Dispatch Email via Resend
     const resendKey = Deno.env.get('CEKPAY_PROD_EMAIL_KEY');
     let emailStatus = 'skipped';
-    if (resendKey) {
+    if (resendKey && email) {
       try {
         const emailRes = await fetch('https://api.resend.com/emails', {
           method: 'POST',

@@ -133,7 +133,7 @@ export const AppLockScreen: React.FC = () => {
             CEK<span className="text-brand">Pay</span>
           </span>
           <span className="text-xs font-bold text-text-muted mt-1 uppercase tracking-widest">
-            The Speedboat of VTU
+            The Speedboat of VTU and Utility Bills Payment
           </span>
         </div>
 

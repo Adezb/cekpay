@@ -145,7 +145,7 @@ export const DashboardPage: React.FC = () => {
           Hello, {user?.firstName || 'User'} 👋
         </h2>
         <p className="text-sm text-text-muted mt-1">
-          Welcome to CEKPay — The Speedboat of VTU.
+          Welcome to CEKPay — The Speedboat of VTU and Utility Bills Payment.
         </p>
       </div>
 

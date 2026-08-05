@@ -10,11 +10,15 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      devOptions: {
+        enabled: true,
+        type: 'module'
+      },
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
         name: 'CEKPay',
         short_name: 'CEKPay',
-        description: 'High Speed VTU app for airtime, data, and bill payments',
+        description: 'CEKPay — The Speedboat of VTU and Utility Bills Payment',
         theme_color: '#1E3A8A',
         background_color: '#F8FAFC',
         display: 'standalone',

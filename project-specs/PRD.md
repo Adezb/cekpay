@@ -2,7 +2,7 @@
 **Product Name:** CEKPay  
 **Parent Company:** CEK TOP VENTURES LTD (RC Registered)  
 **Target Audience:** Everyday Consumers in Nigeria (B2C Focus)  
-**Core Value Proposition:** "The Speedboat of VTU" — Unmatched speed, zero visual clutter, persistent app-lock security, masked data density, and guaranteed zero-liability identity processing.
+**Core Value Proposition:** "The Speedboat of VTU and Utility Bills Payment" — Unmatched speed, zero visual clutter, persistent app-lock security, masked data density, and guaranteed zero-liability identity processing.
 
 ---
 

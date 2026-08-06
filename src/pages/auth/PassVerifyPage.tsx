@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { PassInput } from '../../components/ui/PassInput'
@@ -43,8 +43,8 @@ export function PassVerifyPage() {
     return `+234 ${prefix} XXX ${suffix}`
   })()
 
-  const handleVerify = async (val: string) => {
-    if (val.length !== 6 || isSubmitting) return
+  const handleVerify = useCallback(async (val: string) => {
+    if (val.length !== 6 || isSubmitting || isSuccess) return
 
     setIsSubmitting(true)
 
@@ -68,7 +68,7 @@ export function PassVerifyPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }
+  }, [isSubmitting, isSuccess, verifyPass, showToast, navigate])
 
   const handleResend = async () => {
     if (countdown > 0 || isSubmitting) return

@@ -23,9 +23,14 @@ export const PassInput: React.FC<PassInputProps> = ({
   // Parse the current value string into an array of characters
   const characters = value.split('').concat(Array(length).fill('')).slice(0, length)
 
+  const lastCompletedRef = useRef<string | null>(null)
+
   useEffect(() => {
-    if (value.length === length && onComplete) {
+    if (value.length === length && onComplete && lastCompletedRef.current !== value) {
+      lastCompletedRef.current = value
       onComplete(value)
+    } else if (value.length < length) {
+      lastCompletedRef.current = null
     }
   }, [value, onComplete])
 

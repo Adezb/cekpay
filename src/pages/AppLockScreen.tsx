@@ -48,7 +48,7 @@ export const AppLockScreen: React.FC = () => {
     // In Phase 4: we'll call mockVerifyPin or authStore's unlockWithPin
     let isCorrect = false
 
-    if (user && user.pinHash === enteredPin) {
+    if (user) {
       isCorrect = await unlockWithPin(enteredPin)
     } else if (enteredPin === '1234') {
       isCorrect = true

@@ -139,32 +139,42 @@ serve(async (req: Request) => {
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
     // Update wallet record in Supabase with DVA & settlement bank details
-    const { data: wallet, error: walletErr } = await supabaseAdmin
-      .from('wallets')
-      .update({
-        paystack_customer_code: paystackCustomerCode,
-        dva_account_number: dvaAccountNumber,
-        dva_bank_name: dvaBankName,
-        local_withdrawal_bank: localBankName,
-        local_withdrawal_account: localAccountNumber,
-        local_withdrawal_code: bankCode || null,
-      })
-      .eq('user_id', userId)
-      .select()
-      .single();
+    try {
+      const { data: wallet, error: walletErr } = await supabaseAdmin
+        .from('wallets')
+        .update({
+          paystack_customer_code: paystackCustomerCode,
+          dva_account_number: dvaAccountNumber,
+          dva_bank_name: dvaBankName,
+          local_withdrawal_bank: localBankName,
+          local_withdrawal_account: localAccountNumber,
+          local_withdrawal_code: bankCode || null,
+        })
+        .eq('user_id', userId)
+        .select()
+        .single();
 
-    if (walletErr || !wallet) {
-      throw new Error(`Failed to update wallet: ${walletErr?.message || 'Wallet not found'}`);
+      if (walletErr || !wallet) {
+        return new Response(
+          JSON.stringify({ error: walletErr?.message || 'Wallet not found' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'DVA created and settlement bank linked successfully.',
+          wallet: wallet,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } catch (err: any) {
+      return new Response(
+        JSON.stringify({ error: err?.message || 'Failed to update wallet' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: 'DVA created and settlement bank linked successfully.',
-        wallet: wallet,
-      }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
   } catch (error: any) {
     return new Response(
       JSON.stringify({ error: error.message || 'Internal Server Error' }),

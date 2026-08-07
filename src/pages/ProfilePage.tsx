@@ -42,7 +42,7 @@ export const ProfilePage: React.FC = () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'CEKPay - VTU Speedboat',
+          title: 'CEKPay - VTU/Utility Bills Payment App',
           text: 'Get instant Airtime, Data, and Pay Bills easily on CEKPay! 🚀',
           url: window.location.origin,
         })
@@ -88,7 +88,7 @@ export const ProfilePage: React.FC = () => {
     <div className="min-h-screen bg-background pb-32">
       <header className="bg-brand text-white px-6 pt-12 pb-8 rounded-b-3xl shadow-sm">
         <h1 className="text-2xl font-bold tracking-tight mb-6">Profile</h1>
-        
+
         <div className="flex items-center space-x-4">
           <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center text-3xl font-bold border-2 border-white/30">
             {user.firstName.charAt(0)}
@@ -146,7 +146,7 @@ export const ProfilePage: React.FC = () => {
 
         {/* Quick Actions */}
         <section className="space-y-3">
-          <button 
+          <button
             className="w-full bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between active:scale-95 transition-transform"
             onClick={() => useUIStore.getState().openModal('smart-contacts-manager')}
           >
@@ -161,7 +161,7 @@ export const ProfilePage: React.FC = () => {
             </svg>
           </button>
 
-          <button 
+          <button
             className="w-full bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between active:scale-95 transition-transform"
             onClick={() => openModal('change-pin')}
           >
@@ -176,7 +176,7 @@ export const ProfilePage: React.FC = () => {
             </svg>
           </button>
 
-          <button 
+          <button
             className="w-full bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between active:scale-95 transition-transform"
             onClick={handleShareApp}
           >
@@ -191,7 +191,7 @@ export const ProfilePage: React.FC = () => {
             </svg>
           </button>
 
-          <button 
+          <button
             className="w-full bg-red-600 hover:bg-red-700 text-white p-4 rounded-2xl shadow-md border border-red-700 flex items-center justify-between active:scale-95 transition-transform font-bold"
             onClick={handleLogout}
           >

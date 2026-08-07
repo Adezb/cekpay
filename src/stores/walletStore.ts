@@ -11,6 +11,7 @@ import { create } from 'zustand'
 import type { Wallet } from '../types'
 import { getDashboard } from '../services'
 import { useAuthStore } from './authStore'
+import { useUIStore } from './uiStore'
 import { supabase } from '../lib/supabase'
 
 // ─── State Shape ──────────────────────────────────────────
@@ -126,15 +127,27 @@ if (import.meta.env.VITE_USE_MOCK !== 'true') {
       (payload) => {
         const currentWallet = useWalletStore.getState().wallet
         if (currentWallet && payload.new && payload.new.user_id === currentWallet.userId) {
+          const oldBalance = currentWallet.balance
+          const newBalance = Number(payload.new.balance)
+
           useWalletStore.setState({
             wallet: {
               ...currentWallet,
-              balance: Number(payload.new.balance),
+              balance: newBalance,
               accountNumber: payload.new.dva_account_number || currentWallet.accountNumber,
+              accountName: payload.new.dva_account_name ?? undefined,
               bankName: payload.new.dva_bank_name || currentWallet.bankName,
               paystackCustomerCode: payload.new.paystack_customer_code || currentWallet.paystackCustomerCode,
             },
           })
+
+          if (newBalance > oldBalance) {
+            const creditAmount = newBalance - oldBalance
+            useUIStore.getState().showToast(
+              `Wallet credited with ₦${creditAmount.toLocaleString()}! 💰`,
+              'success'
+            )
+          }
         }
       }
     )

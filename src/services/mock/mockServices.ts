@@ -215,6 +215,19 @@ export async function mockCreatePin(userId: string, pin: string): Promise<Wallet
   return delayed(wallet)
 }
 
+export async function mockChangePin(userId: string, oldPin: string, newPin: string): Promise<boolean> {
+  const user = db.users.find((u) => u.id === userId)
+  if (!user) return delayedError('User not found.')
+  if (user.pinHash !== oldPin) {
+    return delayedError('Current PIN is incorrect.')
+  }
+  if (newPin.length !== 4 || !/^\d{4}$/.test(newPin)) {
+    return delayedError('New PIN must be exactly 4 digits.')
+  }
+  user.pinHash = newPin
+  return delayed(true)
+}
+
 /**
  * Simulates Paystack Resolve Account API.
  */
@@ -247,6 +260,7 @@ export async function mockCreateDVA(
 
   wallet.paystackCustomerCode = `CUS_mock_${Math.random().toString(36).slice(2, 8)}`
   wallet.accountNumber = user.phone.slice(3) // MSISDN '2348012345678' → '8012345678' (10-digit DVA)
+  wallet.accountName = `${user.firstName} ${user.lastName}`.trim() || 'Verified User Account'
   wallet.bankName = 'Wema Bank'
   wallet.localWithdrawalBank = localBankName
   wallet.localWithdrawalAccount = localAccountNumber

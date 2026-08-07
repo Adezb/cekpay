@@ -61,6 +61,7 @@ export interface Database {
           paystack_customer_code: string | null
           paystack_transfer_recipient_code: string | null
           dva_account_number: string | null
+          dva_account_name: string | null
           dva_bank_name: string | null
           local_withdrawal_bank: string | null
           local_withdrawal_account: string | null
@@ -75,6 +76,7 @@ export interface Database {
           paystack_customer_code?: string | null
           paystack_transfer_recipient_code?: string | null
           dva_account_number?: string | null
+          dva_account_name?: string | null
           dva_bank_name?: string | null
           local_withdrawal_bank?: string | null
           local_withdrawal_account?: string | null
@@ -89,6 +91,7 @@ export interface Database {
           paystack_customer_code?: string | null
           paystack_transfer_recipient_code?: string | null
           dva_account_number?: string | null
+          dva_account_name?: string | null
           dva_bank_name?: string | null
           local_withdrawal_bank?: string | null
           local_withdrawal_account?: string | null

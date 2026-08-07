@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useTransactionStore } from '../stores/transactionStore'
 import { StatusBadge } from '../components/ui/StatusBadge'
 import { formatNaira } from '../utils/formatCurrency'
@@ -14,8 +14,12 @@ const FILTER_TABS: { label: string; value: TransactionService | 'All' }[] = [
 ]
 
 export const TransactionsPage: React.FC = () => {
-  const { transactions, isLoading } = useTransactionStore()
+  const { transactions, isLoading, fetchTransactions } = useTransactionStore()
   const [activeFilter, setActiveFilter] = useState<TransactionService | 'All'>('All')
+
+  useEffect(() => {
+    fetchTransactions()
+  }, [fetchTransactions])
 
   const filteredTransactions = useMemo(() => {
     if (activeFilter === 'All') return transactions

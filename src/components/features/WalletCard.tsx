@@ -98,6 +98,9 @@ export const WalletCard: React.FC = () => {
               <div>
                 <p className="text-sm font-medium">{wallet?.bankName}</p>
                 <p className="text-lg font-bold font-mono tracking-wide mt-0.5">{wallet?.accountNumber}</p>
+                {wallet?.accountName && (
+                  <p className="text-xs opacity-80 mt-0.5 font-medium">{wallet.accountName}</p>
+                )}
               </div>
               <button
                 onClick={handleCopy}

@@ -146,6 +146,7 @@ serve(async (req: Request) => {
           paystack_customer_code: paystackCustomerCode,
           dva_account_number: dvaAccountNumber,
           dva_bank_name: dvaBankName,
+          dva_account_name: accountName,
           local_withdrawal_bank: localBankName,
           local_withdrawal_account: localAccountNumber,
           local_withdrawal_code: bankCode || null,

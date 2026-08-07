@@ -137,6 +137,7 @@ export async function apiCreatePin(userId: string, pin: string): Promise<Wallet>
     balance: Number(wallet.balance),
     paystackCustomerCode: wallet.paystack_customer_code || undefined,
     accountNumber: wallet.dva_account_number || undefined,
+    accountName: wallet.dva_account_name || undefined,
     bankName: wallet.dva_bank_name || undefined,
     localWithdrawalBank: wallet.local_withdrawal_bank || undefined,
     localWithdrawalAccount: wallet.local_withdrawal_account || undefined,
@@ -189,6 +190,26 @@ export async function apiVerifyPin(userId: string, pin: string): Promise<boolean
   return !error && Boolean(data?.valid)
 }
 
+export async function apiChangePin(userId: string, oldPin: string, newPin: string): Promise<boolean> {
+  const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-pin', {
+    body: { userId, pin: oldPin },
+  })
+
+  if (verifyError || !verifyData?.valid) {
+    throw new Error(verifyData?.error || verifyError?.message || 'Current PIN is incorrect.')
+  }
+
+  const { data: setData, error: setError } = await supabase.functions.invoke('set-user-pin', {
+    body: { pin: newPin },
+  })
+
+  if (setError || !setData?.success) {
+    throw new Error(setData?.error || setError?.message || 'Failed to update 4-digit PIN.')
+  }
+
+  return true
+}
+
 export async function apiUpdateUserEmail(userId: string, newEmail: string): Promise<User> {
   const { error: authErr } = await supabase.auth.updateUser({ email: newEmail })
   if (authErr) throw new Error(authErr.message)
@@ -238,6 +259,7 @@ export async function apiCreateDVA(
     balance: Number(data.wallet.balance),
     paystackCustomerCode: data.wallet.paystack_customer_code || undefined,
     accountNumber: data.wallet.dva_account_number || undefined,
+    accountName: data.wallet.dva_account_name || undefined,
     bankName: data.wallet.dva_bank_name || undefined,
     localWithdrawalBank: data.wallet.local_withdrawal_bank || undefined,
     localWithdrawalAccount: data.wallet.local_withdrawal_account || undefined,
@@ -487,6 +509,7 @@ export async function apiGetDashboard(userId: string) {
       balance: Number(wallet.balance),
       paystackCustomerCode: wallet.paystack_customer_code || undefined,
       accountNumber: wallet.dva_account_number || undefined,
+      accountName: wallet.dva_account_name || undefined,
       bankName: wallet.dva_bank_name || undefined,
       localWithdrawalBank: wallet.local_withdrawal_bank || undefined,
       localWithdrawalAccount: wallet.local_withdrawal_account || undefined,

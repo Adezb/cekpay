@@ -23,6 +23,7 @@ export interface Wallet {
   balance: number         // DECIMAL
   paystackCustomerCode?: string
   accountNumber?: string  // DVA Account Number
+  accountName?: string    // DVA Account Name
   bankName?: string       // e.g., Wema, Titan
   localWithdrawalBank?: string
   localWithdrawalAccount?: string

@@ -17,6 +17,7 @@ import {
   verifyPin as serviceVerifyPin,
   login as serviceLogin,
 } from '../services'
+import { loginOneSignal, logoutOneSignal } from '../services/notifications'
 
 // ─── State Shape ──────────────────────────────────────────
 
@@ -128,6 +129,7 @@ export const useAuthStore = create<AuthState>()(
           hasPin: true,
         })
 
+        loginOneSignal(updatedUser.id)
         _dispatchAuthChange()
       },
 
@@ -147,6 +149,7 @@ export const useAuthStore = create<AuthState>()(
           hasPin: true,
         })
 
+        loginOneSignal(user.id)
         _dispatchAuthChange()
       },
 
@@ -195,6 +198,7 @@ export const useAuthStore = create<AuthState>()(
         } catch (err) {
           console.error('Supabase signout error:', err)
         }
+        logoutOneSignal()
         set({ ...INITIAL_STATE })
         _dispatchAuthChange()
       },
@@ -296,6 +300,9 @@ if (import.meta.env.VITE_USE_MOCK !== 'true') {
             isAdmin: user.role === 'admin',
             hasPin,
           })
+          if (hasPin) {
+            loginOneSignal(user.id)
+          }
           _dispatchAuthChange()
         } else {
           // If profile does not exist or cannot be fetched, check if an unverified signup flow is active

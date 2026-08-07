@@ -21,6 +21,7 @@ export const sendPass = useMock ? mock.mockSendPass : api.apiSendPass
 export const verifyPass = useMock ? mock.mockVerifyPass : api.apiVerifyPass
 export const createPin = useMock ? mock.mockCreatePin : api.apiCreatePin
 export const verifyPin = useMock ? mock.mockVerifyPin : api.apiVerifyPin
+export const changePin = useMock ? mock.mockChangePin : api.apiChangePin
 export const login = useMock ? mock.mockLogin : api.apiLogin
 export const updateUserEmail = useMock ? mock.mockUpdateUserEmail : api.apiUpdateUserEmail
 

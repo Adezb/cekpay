@@ -4,12 +4,13 @@ import { useWalletStore } from '../stores/walletStore'
 import { useUIStore } from '../stores/uiStore'
 import { Modal } from '../components/ui/Modal'
 import { Spinner } from '../components/ui/Spinner'
+import { ChangePinModal } from '../components/features/ChangePinModal'
 import { updateUserEmail as mockUpdateUserEmail } from '../services'
 
 export const ProfilePage: React.FC = () => {
   const { user, logout, toggleAdminRole, updateUser } = useAuthStore()
   const { wallet } = useWalletStore()
-  const { showToast } = useUIStore()
+  const { showToast, openModal } = useUIStore()
 
   const [isCopied, setIsCopied] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
@@ -121,7 +122,9 @@ export const ProfilePage: React.FC = () => {
               <p className="text-lg font-bold text-text-primary tracking-wide">
                 {wallet.accountNumber}
               </p>
-              <p className="text-xs text-text-muted mt-1">Dedicated Virtual Account</p>
+              <p className="text-xs text-text-muted mt-1 font-medium">
+                {wallet.accountName || 'Dedicated Virtual Account'}
+              </p>
             </div>
             <button
               onClick={handleCopyAccount}
@@ -160,7 +163,7 @@ export const ProfilePage: React.FC = () => {
 
           <button 
             className="w-full bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between active:scale-95 transition-transform"
-            onClick={() => showToast('Change PIN coming soon in Phase 9.x', 'info')}
+            onClick={() => openModal('change-pin')}
           >
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-blue-50 text-brand rounded-full flex items-center justify-center">
@@ -305,6 +308,9 @@ export const ProfilePage: React.FC = () => {
           </button>
         </div>
       </Modal>
+
+      {/* Change PIN Modal */}
+      <ChangePinModal />
     </div>
   )
 }

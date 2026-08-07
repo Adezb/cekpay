@@ -67,6 +67,7 @@ export const MOCK_WALLETS: Wallet[] = [
     balance: 5000,
     paystackCustomerCode: 'CUS_mock_abc123',
     accountNumber: '8012345678',  // DVA derived from MSISDN (last 10 digits)
+    accountName: 'Demo User',
     bankName: 'Wema Bank',
   },
   {
@@ -75,6 +76,7 @@ export const MOCK_WALLETS: Wallet[] = [
     balance: 250_000,
     paystackCustomerCode: 'CUS_mock_admin_001',
     accountNumber: '8099999999',  // DVA derived from MSISDN (last 10 digits)
+    accountName: 'Admin User',
     bankName: 'Wema Bank',
   },
 ]
